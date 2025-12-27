@@ -188,6 +188,7 @@ def main():
     df_final.to_csv("data/final.csv", index=False)
 
 
+    cv2.imwrite("data/original.png", drawing)
     vis = draw_boxes(drawing, df_final)
     cv2.imwrite("data/ocr_boxes.png", vis)
 

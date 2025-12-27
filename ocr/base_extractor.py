@@ -179,3 +179,4 @@ class BaseExtractor:
     @staticmethod
     def merge_values(line_df):
         return " ".join(line_df["value"].tolist()).strip()
+
