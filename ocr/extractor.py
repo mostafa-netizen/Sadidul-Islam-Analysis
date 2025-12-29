@@ -1,6 +1,4 @@
-import cv2
 import pandas as pd
-from aistudio_sdk.requests.dataset import post_request_get_file_ids
 
 from ocr.base_extractor import BaseExtractor
 
