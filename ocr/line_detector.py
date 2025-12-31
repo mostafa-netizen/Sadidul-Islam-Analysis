@@ -1,8 +1,12 @@
+import uuid
+
 import cv2
 import numpy as np
 
 
 def find_template_location(image, template):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     best = None
 
     for scale in np.linspace(0.6, 1.4, 20):
@@ -18,10 +22,13 @@ def find_template_location(image, template):
         if best is None or val > best[0]:
             best = (val, loc, (tw, th))
 
-    val, (x, y), (w, h) = best
-    bbox = (x, y, x + w, y + h)
+    try:
+        val, (x, y), (w, h) = best
+        bbox = (x, y, x + w, y + h)
 
-    return val, bbox
+        return val, bbox
+    except TypeError:
+        return None, None
 
 def is_horizontal(l):
     return abs(l[1] - l[3]) < 10
@@ -32,8 +39,6 @@ def is_vertical(l):
 def distance_to_bbox(line, bbox):
     bx1, by1, bx2, by2 = bbox
     x1, y1, x2, y2 = line
-    print("bbox", bbox)
-    print(line)
 
     distances = []
 
@@ -154,3 +159,76 @@ def merge_lines(lines, dist_thresh=15):
             merged.append(line)
 
     return merged
+
+def find_contours(image_cropped):
+    gray = cv2.cvtColor(image_cropped, cv2.COLOR_BGR2GRAY)
+    inverted_image = cv2.bitwise_not(gray)
+    _, thresh = cv2.threshold(inverted_image, 100, 255, 0)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    return contours
+
+def match_contours(source_cnt, image_crop):
+    target_cnt_s = find_contours(image_crop)
+    image_copy = image_crop.copy()
+    matched = False
+    for c in target_cnt_s:
+        r = cv2.matchShapes(source_cnt, c, cv2.CONTOURS_MATCH_I1, 0.0)
+        if r < 50 and cv2.contourArea(c) > 300:
+            # print(r)
+            # print(cv2.contourArea(c), cv2.contourArea(source_cnt))
+            cv2.drawContours(image_copy, [c], -1, (0,255,0), 3)
+            matched = True
+
+    return matched, image_copy
+
+def find_template_and_match(source_image):
+    image = source_image.copy()
+    template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-top.png", cv2.IMREAD_COLOR)
+    cnt_s = find_contours(template)
+    val, bbox = find_template_location(image, template)
+    if val is None or bbox is None:
+        return False, bbox
+
+    x1, y1, x2, y2 = bbox
+    img_crop = image[y1:y2, x1:x2]
+    matched, image_r = match_contours(cnt_s[2], img_crop)
+
+    # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
+    cv2.imwrite(f"/home/sadid/PycharmProjects/sgs-drawing-analysis/data/output/{uuid.uuid4()}.png", image_r)
+    return matched, bbox, val
+
+
+def point_inside_bbox(x, y, bbox):
+    bx1, by1, bx2, by2 = bbox
+    return bx1 <= x <= bx2 and by1 <= y <= by2
+
+
+def distance_point_to_bbox(x, y, bbox):
+    bx1, by1, bx2, by2 = bbox
+    dx = max(bx1 - x, 0, x - bx2)
+    dy = max(by1 - y, 0, y - by2)
+    return (dx**2 + dy**2) ** 0.5
+
+def detect_line_ending_in_bbox(lines, bbox):
+    best_line = None
+    best_dist = float("inf")
+
+    for x1, y1, x2, y2 in lines:
+        p1_inside = point_inside_bbox(x1, y1, bbox)
+        p2_inside = point_inside_bbox(x2, y2, bbox)
+
+        # exactly ONE endpoint must be inside
+        if p1_inside ^ p2_inside:
+            # outside endpoint
+            if p1_inside:
+                xo, yo = x2, y2
+            else:
+                xo, yo = x1, y1
+
+            dist = distance_point_to_bbox(xo, yo, bbox)
+
+            if dist < best_dist:
+                best_dist = dist
+                best_line = (x1, y1, x2, y2)
+
+    return best_line
