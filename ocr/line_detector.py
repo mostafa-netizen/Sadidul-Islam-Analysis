@@ -173,25 +173,40 @@ def match_contours(source_cnt, image_crop):
     matched = False
     for c in target_cnt_s:
         r = cv2.matchShapes(source_cnt, c, cv2.CONTOURS_MATCH_I1, 0.0)
-        if r < 50 and cv2.contourArea(c) > 300:
-            # print(r)
-            # print(cv2.contourArea(c), cv2.contourArea(source_cnt))
+        if r < 50 and cv2.contourArea(c) > 200:
             cv2.drawContours(image_copy, [c], -1, (0,255,0), 3)
             matched = True
 
     return matched, image_copy
 
-def find_template_and_match(source_image):
-    image = source_image.copy()
-    template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-top.png", cv2.IMREAD_COLOR)
-    cnt_s = find_contours(template)
+def crop_template_location(image, template):
     val, bbox = find_template_location(image, template)
     if val is None or bbox is None:
         return False, bbox
 
     x1, y1, x2, y2 = bbox
     img_crop = image[y1:y2, x1:x2]
+    return val, bbox, img_crop
+
+def find_template_and_match(source_image):
+    image = source_image.copy()
+
+    template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-top.png", cv2.IMREAD_COLOR)
+    cnt_s = find_contours(template)
+    val, bbox, img_crop = crop_template_location(image, template)
     matched, image_r = match_contours(cnt_s[2], img_crop)
+
+    if not matched:
+        template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-bottom.png", cv2.IMREAD_COLOR)
+        cnt_s = find_contours(template)
+        val, bbox, img_crop = crop_template_location(image, template)
+        matched, image_r = match_contours(cnt_s[2], img_crop)
+
+    if not matched:
+        template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/bottom-left.png", cv2.IMREAD_COLOR)
+        cnt_s = find_contours(template)
+        val, bbox, img_crop = crop_template_location(image, template)
+        matched, image_r = match_contours(cnt_s[2], img_crop)
 
     # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
     cv2.imwrite(f"/home/sadid/PycharmProjects/sgs-drawing-analysis/data/output/{uuid.uuid4()}.png", image_r)

@@ -57,8 +57,8 @@ if __name__ == '__main__':
     final_lines = merge_lines(raw_lines)
 
     vis = img.copy()
-    # for x1, y1, x2, y2 in final_lines:
-    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    for x1, y1, x2, y2 in final_lines:
+        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     i = 0
     for tendon in value:
@@ -81,10 +81,12 @@ if __name__ == '__main__':
             matched, bbox, val = find_template_and_match(img_crop)
             xt1, yt1, xt2, yt2 = bbox
             xt1, yt1, xt2, yt2 = xt1 + xe1, yt1  + ye1, xt2 + xe1, yt2 + ye1
+            bbox = (xt1, yt1, xt2, yt2)
             cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
             cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             if matched:
                 found = detect_line_ending_in_bbox(final_lines, (xt1, yt1, xt2, yt2))
+                print(bbox, found)
                 if found is not None:
                     xl1, yl1, xl2, yl2 = found
                     cv2.line(vis, (xl1, yl1), (xl2, yl2), color, 4)
