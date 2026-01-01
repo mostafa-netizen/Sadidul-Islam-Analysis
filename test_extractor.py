@@ -1,4 +1,3 @@
-# import random
 import random
 
 import cv2
@@ -7,7 +6,6 @@ import pandas as pd
 
 from ocr.extractor import TextExtractor
 from ocr.line_detector import detect_lines_global, merge_lines, find_template_and_match, detect_line_ending_in_bbox
-# from ocr.line_detector import find_closest_line
 
 
 def draw_boxes(image, df, color=(0, 255, 0), thickness=2):
@@ -53,7 +51,12 @@ if __name__ == '__main__':
 
     img = cv2.imread("data/original.png")
     height, width = img.shape[:2]
-    raw_lines = detect_lines_global(img)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+    kernel = np.ones((2, 2), np.uint8)
+    erode = cv2.erode(thresh, kernel)
+
+    raw_lines = detect_lines_global(erode)
     final_lines = merge_lines(raw_lines)
 
     vis = img.copy()
@@ -64,7 +67,6 @@ if __name__ == '__main__':
     for tendon in value:
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         x1, y1, x2, y2 = int(x1*width), int(y1*height), int(x2*width), int(y2*height)  # indicator bbox
-
         # vis = draw_boxes(vis, tendon)
 
         color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))

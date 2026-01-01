@@ -36,42 +36,6 @@ def is_horizontal(l):
 def is_vertical(l):
     return abs(l[0] - l[2]) < 10
 
-def distance_to_bbox(line, bbox):
-    bx1, by1, bx2, by2 = bbox
-    x1, y1, x2, y2 = line
-
-    distances = []
-
-    if is_horizontal(line):
-        distances.append(("top-y1", abs(y1 - by1)))
-        distances.append(("top-y2", abs(y2 - by1)))
-        distances.append(("bottom-y1", abs(y1 - by2)))
-        distances.append(("bottom-y2", abs(y2 - by2)))
-
-    if is_vertical(line):
-        distances.append(("left-x1", abs(x1 - bx1)))
-        distances.append(("left-x2", abs(x2 - bx1)))
-        distances.append(("right-x1", abs(x1 - bx2)))
-        distances.append(("right-x2", abs(x2 - bx2)))
-
-    return distances
-
-def find_closest_line(lines, bbox):
-    best = None
-    min_dist = float("inf")
-
-    for line in lines:
-        for side, dist in distance_to_bbox(line, bbox):
-            if dist < min_dist:
-                min_dist = dist
-                best = {
-                    "line": line,
-                    "side": side,
-                    "distance": dist
-                }
-
-    return best
-
 def tile_image(img, tile_size=500, overlap=100):
     h, w = img.shape[:2]
     step = tile_size - overlap
@@ -83,11 +47,11 @@ def tile_image(img, tile_size=500, overlap=100):
             if tile.shape[0] < tile_size or tile.shape[1] < tile_size:
                 continue
             tiles.append((tile, x, y))
+
     return tiles
 
 def detect_lines(tile):
-    gray = cv2.cvtColor(tile, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    edges = cv2.Canny(tile, 50, 150, apertureSize=3)
 
     lines = cv2.HoughLinesP(
         edges,
@@ -110,6 +74,7 @@ def detect_lines(tile):
     return results
 
 def detect_lines_global(img):
+
     tiles = tile_image(img)
     global_lines = []
 
@@ -245,5 +210,4 @@ def detect_line_ending_in_bbox(lines, bbox):
             if dist < best_dist:
                 best_dist = dist
                 best_line = (x1, y1, x2, y2)
-
     return best_line
