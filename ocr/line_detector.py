@@ -102,29 +102,6 @@ def detect_horizontal_lines(tile):
 def detect_lines(tile):
     return detect_horizontal_lines(tile) + detect_vertical_lines(tile)
 
-# def detect_lines(tile):
-#     edges = cv2.Canny(tile, 50, 150, apertureSize=3)
-#
-#     lines = cv2.HoughLinesP(
-#         edges,
-#         rho=1,
-#         theta=np.pi / 180,
-#         threshold=120,
-#         minLineLength=100,
-#         maxLineGap=20
-#     )
-#
-#     results = []
-#     if lines is not None:
-#         for l in lines:
-#             x1, y1, x2, y2 = l[0]
-#
-#             # keep horizontal or vertical
-#             if abs(x1 - x2) < 10 or abs(y1 - y2) < 10:
-#                 results.append((x1, y1, x2, y2))
-#
-#     return results
-
 def detect_lines_global(img):
 
     tiles = tile_image(img)

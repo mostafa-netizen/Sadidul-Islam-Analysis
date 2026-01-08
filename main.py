@@ -1,10 +1,14 @@
+import os
 from itertools import batched
 
 import numpy as np
+import tqdm
 from pdf2image import convert_from_path
 from ocr.doctr import OCR
 import pandas as pd
 import cv2
+
+from test_extractor import extract_tendons
 
 
 def crop_tiles(image, tile_size=1000, overlap=250):
@@ -99,14 +103,14 @@ def deduplicate_ocr(df, iou_thresh=0.6):
     return df.loc[keep].reset_index(drop=True)
 
 
-def tile_ocr(drawing) -> pd.DataFrame:
+def tile_ocr(drawing, gpu, batch_size=2) -> pd.DataFrame:
     full_h, full_w = drawing.shape[:2]
     tiles = crop_tiles(drawing)
     docs = [tile["image"] for tile in tiles]
-    ocr = OCR(gpu=True)
+    ocr = OCR(gpu=gpu)
     results = []
 
-    for batch in list(batched(docs, 5)):
+    for batch in list(batched(docs, batch_size)):
         if len(batch) == 0:
             break
 
@@ -177,24 +181,22 @@ def draw_boxes(image, df, color=(0, 255, 0), thickness=2):
 
 
 def main():
-    images = convert_from_path(
-        '/home/sadid/PycharmProjects/sgs-drawing-analysis/data/1029 Market (Struct 4.19.2017) compress.pdf')
+    input_path = '/home/sadid/PycharmProjects/sgs-drawing-analysis/data/1029 Market (Struct 4.19.2017) compress.pdf'
+    gpu = True
 
-    print(len(images))
-    drawing = np.asarray(images[8])
-    df_final = tile_ocr(drawing)
-    # print(" ".join(df_final.value))
-    print(df_final.shape)
-    df_final.to_csv("data/final.csv", index=False)
+    images = convert_from_path(input_path)
+    print("Total images: ", len(images))
+    os.makedirs("data/final_output", exist_ok=True)
+    progress = tqdm.tqdm(total=len(images))
+    for i, drawing in enumerate(images):
+        drawing = np.asarray(drawing)
+        df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
+        # cv2.imwrite(f"data/original.png", drawing)
+        # df_final.to_csv("data/final.csv", index=False)
+        vis = extract_tendons(df_final, drawing)
+        cv2.imwrite(f"data/final_output/tendons-{i}.png", vis)
+        progress.update(1)
 
-    cv2.imwrite("data/original.png", drawing)
-    vis = draw_boxes(drawing, df_final)
-    cv2.imwrite("data/ocr_boxes.png", vis)
 
 if __name__ == '__main__':
     main()
-    # print(np.asarray(images[8]).shape)
-    # ocr = OCR(gpu=True)
-    # results = ocr.from_image([doc1])
-    # # print(results[0][['word_idx', 'value', 'confidence', 'x1', 'y1', 'x2', 'y2']])
-    # print(" ".join(results[0]["value"]))
