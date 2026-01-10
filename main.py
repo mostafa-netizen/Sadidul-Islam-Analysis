@@ -185,6 +185,7 @@ def main():
     gpu = True
 
     images = convert_from_path(input_path)
+    # images = images[10:11]
     print("Total images: ", len(images))
     os.makedirs("data/final_output", exist_ok=True)
     progress = tqdm.tqdm(total=len(images))

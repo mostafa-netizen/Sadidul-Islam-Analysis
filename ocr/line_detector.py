@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import cv2
@@ -161,17 +162,19 @@ def find_contours(image_cropped):
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
-def match_contours(source_cnt, image_crop):
+def match_contours(source_cnt, image_crop, area):
     target_cnt_s = find_contours(image_crop)
-    image_copy = image_crop.copy()
-    matched = False
+    # image_copy = image_crop.copy()
+    scores = []
+    cnt_s = []
     for c in target_cnt_s:
-        r = cv2.matchShapes(source_cnt, c, cv2.CONTOURS_MATCH_I1, 0.0)
-        if r < 50 and cv2.contourArea(c) > 200:
-            cv2.drawContours(image_copy, [c], -1, (0,255,0), 3)
-            matched = True
+        # if r < 50 and cv2.contourArea(c) > 200:
+        if cv2.contourArea(c) > area:
+            r = cv2.matchShapes(source_cnt, c, cv2.CONTOURS_MATCH_I1, 0.0)
+            scores.append(r)
+            cnt_s.append(c)
 
-    return matched, image_copy
+    return scores, cnt_s
 
 def crop_template_location(image, template):
     val, bbox = find_template_location(image, template)
@@ -182,29 +185,57 @@ def crop_template_location(image, template):
     img_crop = image[y1:y2, x1:x2]
     return val, bbox, img_crop
 
-def find_template_and_match(source_image):
-    image = source_image.copy()
-
-    template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-top.png", cv2.IMREAD_COLOR)
+def find_matched(image, template, template_val):
+    template = cv2.imread(template, cv2.IMREAD_COLOR)
     cnt_s = find_contours(template)
     val, bbox, img_crop = crop_template_location(image, template)
-    matched, image_r = match_contours(cnt_s[2], img_crop)
+    scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
+    if len(scores) > 0:
+        index = np.argmin(scores)
 
-    if not matched:
-        template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/left-bottom.png", cv2.IMREAD_COLOR)
-        cnt_s = find_contours(template)
-        val, bbox, img_crop = crop_template_location(image, template)
-        matched, image_r = match_contours(cnt_s[2], img_crop)
+        return scores[index], bbox, val
+    return None
 
-    if not matched:
-        template = cv2.imread("/home/sadid/PycharmProjects/sgs-drawing-analysis/img_templates/bottom-left.png", cv2.IMREAD_COLOR)
-        cnt_s = find_contours(template)
-        val, bbox, img_crop = crop_template_location(image, template)
-        matched, image_r = match_contours(cnt_s[2], img_crop)
 
-    # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
-    cv2.imwrite(f"/home/sadid/PycharmProjects/sgs-drawing-analysis/data/output/{uuid.uuid4()}.png", image_r)
-    return matched, bbox, val
+def find_template_and_match(source_image):
+    image = source_image.copy()
+    template_vals = {
+        "1.png": [3, 100],
+        "2.png": [6, 100],
+        "3.png": [2, 100],
+        "4.png": [0, 100],
+        "5.png": [0, 100],
+        "6.png": [3, 100],
+        "7.png": [2, 100],
+        "8.png": [2, 100],
+        "9.png": [2, 100],
+        "bottom-left.png": [5, 200],
+        "left-bottom.png": [2, 200],
+        "left-bottom-0.png": [1, 200],
+        "left-top.png": [2, 200],
+        "left-top-0.png": [1, 200],
+        "left-top-bottom.png": [1, 200],
+    }
+
+    bboxes = []
+    scores = []
+    vals = []
+    for template in os.listdir("img_templates"):
+        r = find_matched(image, f"img_templates/{template}", template_vals[template])
+        if r is not None:
+            score, bbox, val = r
+            bboxes.append(bbox)
+            scores.append(score)
+            vals.append(val)
+
+    if len(scores) > 0:
+        index = np.argmin(scores)
+        # # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
+        # # os.makedirs("data/output", exist_ok=True)
+        # # cv2.imwrite(f"data/output/{uuid.uuid4()}.png", image_r)
+        return True, bboxes[index], vals[index]
+    else:
+        return False, None, None
 
 
 def point_inside_bbox(x, y, bbox):
