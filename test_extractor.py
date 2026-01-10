@@ -63,12 +63,12 @@ def extract_tendons(words, image):
     b_th = 10
     i = 0
     for tendon in value:
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        # is_banded = not tendon.loc[tendon.value.str.contains("BANDED")].empty
-        # if not is_banded:
-        #     color = (255, 0, 0)
-        # else:
-        #     color = (0, 0, 255)
+        # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        is_banded = not tendon.loc[tendon.value.str.contains("BANDED")].empty
+        if not is_banded:
+            color = (255, 0, 0)
+        else:
+            color = (0, 0, 255)
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
         # vis = draw_boxes(vis, tendon)

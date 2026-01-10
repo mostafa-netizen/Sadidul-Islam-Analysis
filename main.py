@@ -181,7 +181,8 @@ def draw_boxes(image, df, color=(0, 255, 0), thickness=2):
 
 
 def main():
-    input_path = '/home/sadid/PycharmProjects/sgs-drawing-analysis/data/1029 Market (Struct 4.19.2017) compress.pdf'
+    # input_path = '/home/sadid/PycharmProjects/sgs-drawing-analysis/data/1029 Market (Struct 4.19.2017) compress.pdf'
+    input_path = '/home/sadid/PycharmProjects/sgs-drawing-analysis/data/plan.pdf'
     gpu = True
 
     images = convert_from_path(input_path)
