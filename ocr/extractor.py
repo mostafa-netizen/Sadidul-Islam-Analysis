@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 from ocr.base_extractor import BaseExtractor
@@ -23,7 +25,7 @@ class TextExtractor(BaseExtractor):
         all_keywords = self.find_keyword(keyword, debug)
         tendons = []
 
-        for i, row in all_keywords.reset_index().iterrows():
+        for i, _ in all_keywords.reset_index().iterrows():
             ref_df = self.find_keywords([{"keyword": keyword, "index": i}], debug)
             position = self.parse_position([1, -4, -4, 4])
             top, left, bottom, right = self.calculate_dimension(ref_df, position)
@@ -48,27 +50,30 @@ class TextExtractor(BaseExtractor):
                 tendons.append(tendon)
 
         return tendons
-        # # try:
-        # keywords, position, debug = find["keywords"], find["position_of_value"], find["debug"]
-        # position = self.parse_position(position)
-        # # print(position)
-        # # print(ref_df)
-        # top, left, bottom, right = self.calculate_dimension(ref_df, position)
-        # value = self.filter_all(self.words, position, top, bottom, left, right, debug)
-        #
-        # if debug:
-        #     print("value")
-        #     print(value[self.columns].to_string())
-        #
-        # if "words" in find.keys():
-        #     value = value.iloc[0:find["words"]]
-        #
-        # result = self.merge_values(value)
-        #
-        # if "regex_parse" in find.keys():
-        #     result = re.search(find["regex_parse"], result).group(0)
-        #
-        # return result
-        # # except Exception as e:
-        # #
-        # #     return None
+
+    def get_scale(self, debug=False):
+        keyword = "SCALE"
+        all_keywords = self.find_keyword(keyword, debug)
+        try:
+            for i, _ in all_keywords.reset_index().iterrows():
+                pattern = r"^\d+'$"
+                ref_df = self.find_keywords([{"keyword": keyword, "index": i}], debug)
+                position = self.parse_position([5, -4, 50, 150])
+                top, left, bottom, right = self.calculate_dimension(ref_df, position)
+                value = self.filter_all(self.words, position, top, bottom, left, right, debug)
+                mask = value['value'].astype(str).str.match(pattern)
+                dimension_df = value[mask]
+                dimension_df = dimension_df.sort_values(by=["x1"])
+                dimension_df = dimension_df.reset_index(drop=True)
+                dimension_df['x_mid'] = (dimension_df['x1'] + dimension_df['x2']) / 2
+
+                dist_0_1 = abs(dimension_df.loc[0, 'x_mid'] - dimension_df.loc[1, 'x_mid'])
+                d1 = int(re.search(r"\d+", dimension_df.loc[0, 'value']).group())
+                d2 = int(re.search(r"\d+", dimension_df.loc[1, 'value']).group())
+
+                return abs(d2 - d1), dimension_df.loc[0, 'value'][-1], dist_0_1
+        except Exception as e:
+            print("Measure detection error:", e)
+
+        return None, None, None
+

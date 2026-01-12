@@ -1,3 +1,4 @@
+import math
 import os
 import random
 
@@ -7,6 +8,10 @@ import pandas as pd
 
 from ocr.extractor import TextExtractor
 from ocr.line_detector import detect_lines_global, merge_lines, find_template_and_match, detect_line_ending_in_bbox
+
+
+def distance(xl1, yl1, xl2, yl2):
+    return math.hypot(xl2 - xl1, yl2 - yl1)
 
 
 def draw_boxes(image, df, color=(0, 255, 0), thickness=2):
@@ -46,6 +51,7 @@ def draw_boxes(image, df, color=(0, 255, 0), thickness=2):
 
 def extract_tendons(words, image):
     text_extractor = TextExtractor(words, debug=True)
+    measure, unit, pixel_dist = text_extractor.get_scale()
     value = text_extractor.get_tendons()
     height, width = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -87,9 +93,14 @@ def extract_tendons(words, image):
                 if found is not None:
                     cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 3)
                     cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-                    cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     xl1, yl1, xl2, yl2 = found
                     cv2.line(vis, (xl1, yl1), (xl2, yl2), color, 4)
+                    try:
+                        pixel_dist *= width
+                        measurement = "~{:.2f}{}".format((distance(xl1, yl1, xl2, yl2)/pixel_dist)*measure, unit)
+                        cv2.putText(vis, f"{measurement}", (xe1, ye1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                    except Exception as e:
+                        print("Measurement error:", e)
             #     else:
             #         color = (255, 0, 0)
             #         cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
@@ -107,7 +118,8 @@ def main():
     os.makedirs("data", exist_ok=True)
     image = cv2.imread("data/original.png")
     vis = extract_tendons(word_df, image)
-    cv2.imwrite(f"data/ocr_boxes_tendon-{0}.png", vis)
+    if vis is not None:
+        cv2.imwrite(f"data/ocr_boxes_tendon-{0}.png", vis)
     print("Finished")
 
 if __name__ == '__main__':
