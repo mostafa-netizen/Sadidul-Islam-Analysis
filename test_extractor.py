@@ -1,6 +1,6 @@
 import math
 import os
-import random
+# import random
 
 import cv2
 import numpy as np
@@ -54,6 +54,10 @@ def extract_tendons(words, image):
     measure, unit, pixel_dist = text_extractor.get_scale()
     value = text_extractor.get_tendons()
     height, width = image.shape[:2]
+
+    if pixel_dist is not None:
+        pixel_dist *= width
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
     kernel = np.ones((2, 2), np.uint8)
@@ -77,13 +81,11 @@ def extract_tendons(words, image):
             color = (0, 0, 255)
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
-        # vis = draw_boxes(vis, tendon)
         w, h = x2 - x1, y2 - y1
         xe1, ye1, xe2, ye2 = x1 - w, y1 - h, x2 + w, y2 + int(h * 2.5)
         img_crop = image[ye1:ye2, xe1:xe2]
         i = i + 1
         if img_crop.shape[0] > 0 and img_crop.shape[1] > 0:
-            # cv2.imwrite(f"data/examples-output/tendon_image_{i}.png", img_crop)
             matched, bbox, val = find_template_and_match(img_crop)
 
             if matched:
@@ -96,11 +98,12 @@ def extract_tendons(words, image):
                     xl1, yl1, xl2, yl2 = found
                     cv2.line(vis, (xl1, yl1), (xl2, yl2), color, 4)
                     try:
-                        pixel_dist *= width
                         measurement = "~{:.2f}{}".format((distance(xl1, yl1, xl2, yl2)/pixel_dist)*measure, unit)
                         cv2.putText(vis, f"{measurement}", (xe1, ye1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
                     except Exception as e:
-                        print("Measurement error:", e)
+                        pass
+                        # print("Measurement error:", e)
+
             #     else:
             #         color = (255, 0, 0)
             #         cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)

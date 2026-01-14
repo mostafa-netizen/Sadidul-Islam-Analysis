@@ -73,7 +73,8 @@ class TextExtractor(BaseExtractor):
 
                 return abs(d2 - d1), dimension_df.loc[0, 'value'][-1], dist_0_1
         except Exception as e:
-            print("Measure detection error:", e)
+            pass
+            # print("Measure detection error:", e)
 
         return None, None, None
 
