@@ -37,7 +37,7 @@ def is_horizontal(l):
 def is_vertical(l):
     return abs(l[0] - l[2]) < 10
 
-def tile_image(img, tile_size=500, overlap=100):
+def tile_image(img, tile_size=1500, overlap=300):
     h, w = img.shape[:2]
     step = tile_size - overlap
 
@@ -56,23 +56,19 @@ def detect_vertical_lines(tile):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
     vertical = cv2.morphologyEx(bw, cv2.MORPH_OPEN, kernel)
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5)))
-    bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 100))
+    bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 100))
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_CLOSE, bridge_kernel)
     extract_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 60))
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_OPEN, extract_kernel)
-    kernel = np.ones((5, 5), np.uint8)
-    vertical = cv2.dilate(vertical, kernel)
-    vertical = cv2.erode(vertical, kernel, iterations=3)
-    contours, _ = cv2.findContours(
-        vertical,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE
-    )
+    # kernel = np.ones((5, 5), np.uint8)
+    # vertical = cv2.dilate(vertical, kernel)
+    # vertical = cv2.erode(vertical, kernel, iterations=3)
+    contours, _ = cv2.findContours(vertical, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     final_lines = []
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
-        if h > 100 and w < 15:
+        if h > 100 and w < 20:
             final_lines.append((x + w // 2, y, x + w // 2, y + h))
 
     return final_lines
@@ -83,19 +79,19 @@ def detect_horizontal_lines(tile):
 
     horizontal = cv2.morphologyEx(bw, cv2.MORPH_OPEN, kernel)
     horizontal = cv2.morphologyEx(horizontal, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 1)))
-    bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 3))
+    bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 1))
     horizontal = cv2.morphologyEx(horizontal, cv2.MORPH_CLOSE, bridge_kernel)
     extract_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (60, 1))
     horizontal = cv2.morphologyEx(horizontal, cv2.MORPH_OPEN, extract_kernel)
-    kernel = np.ones((5, 5), np.uint8)
-    horizontal = cv2.dilate(horizontal, kernel)
-    horizontal = cv2.erode(horizontal, kernel, iterations=3)
+    # kernel = np.ones((5, 5), np.uint8)
+    # horizontal = cv2.dilate(horizontal, kernel)
+    # horizontal = cv2.erode(horizontal, kernel, iterations=3)
     contours, _ = cv2.findContours(horizontal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     final_lines = []
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
-        if w > 100 and h < 15:
+        if w > 100 and h < 20:
             final_lines.append((x, y + h // 2, x + w, y + h // 2))
 
     return final_lines

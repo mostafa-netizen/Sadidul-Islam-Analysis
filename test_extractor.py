@@ -67,8 +67,8 @@ def extract_tendons(words, image):
     final_lines = merge_lines(raw_lines)
 
     vis = image.copy()
-    # for x1, y1, x2, y2 in final_lines:
-    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    for x1, y1, x2, y2 in final_lines:
+        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     b_th = 10
     i = 0
@@ -103,16 +103,15 @@ def extract_tendons(words, image):
                     except Exception as e:
                         pass
                         # print("Measurement error:", e)
-
-            #     else:
-            #         color = (255, 0, 0)
-            #         cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
-            #         cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-            #         cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            # else:
-            #     color = (0, 0, 255)
-            #     cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
-            #     cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+                else:
+                    color = (255, 0, 0)
+                    cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
+                    cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
+                    cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            else:
+                color = (0, 0, 255)
+                cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
+                cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
 
     return vis
 
