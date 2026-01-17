@@ -186,18 +186,26 @@ def main():
     gpu = True
 
     images = convert_from_path(input_path)
-    # images = images[10:11]
+    # images = images[8:11]
     print("Total images: ", len(images))
     os.makedirs("data/final_output", exist_ok=True)
     progress = tqdm.tqdm(total=len(images))
+    excels = []
     for i, drawing in enumerate(images):
         drawing = np.asarray(drawing)
         df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
         # cv2.imwrite(f"data/original.png", drawing)
         # df_final.to_csv("data/final.csv", index=False)
-        vis = extract_tendons(df_final, drawing)
+        vis, excel = extract_tendons(df_final, drawing)
+        excel["page"] = i + 1
+        excels.append(excel)
         cv2.imwrite(f"data/final_output/tendons-{i}.png", vis)
         progress.update(1)
+
+    excels = pd.concat(excels)
+    print("Total tendons: ", len(excels))
+    print(excels.head())
+    excels.to_excel("data/final_output/tendons.xlsx", index=False)
 
 
 if __name__ == '__main__':

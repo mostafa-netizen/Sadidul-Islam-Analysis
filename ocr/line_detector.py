@@ -205,6 +205,8 @@ def find_template_and_match(source_image):
         "7.png": [2, 100],
         "8.png": [2, 100],
         "9.png": [2, 100],
+        "10.png": [3, 100],
+        "11.png": [1, 100],
         "bottom-left.png": [5, 200],
         "left-bottom.png": [2, 200],
         "left-bottom-0.png": [1, 200],
@@ -216,6 +218,7 @@ def find_template_and_match(source_image):
     bboxes = []
     scores = []
     vals = []
+    templates = []
     for template in os.listdir("img_templates"):
         r = find_matched(image, f"img_templates/{template}", template_vals[template])
         if r is not None:
@@ -223,12 +226,16 @@ def find_template_and_match(source_image):
             bboxes.append(bbox)
             scores.append(score)
             vals.append(val)
+            templates.append(template)
 
     if len(scores) > 0:
         index = np.argmin(scores)
         # # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
         # # os.makedirs("data/output", exist_ok=True)
         # # cv2.imwrite(f"data/output/{uuid.uuid4()}.png", image_r)
+        # for t, s in zip(templates, scores):
+        #     if t == "11.png":
+        #         print(t, s)
         return True, bboxes[index], vals[index]
     else:
         return False, None, None

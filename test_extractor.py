@@ -67,11 +67,12 @@ def extract_tendons(words, image):
     final_lines = merge_lines(raw_lines)
 
     vis = image.copy()
-    for x1, y1, x2, y2 in final_lines:
-        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    # for x1, y1, x2, y2 in final_lines:
+    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     b_th = 10
     i = 0
+    excel = []
     for tendon in value:
         # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         is_banded = not tendon.loc[tendon.value.str.contains("BANDED")].empty
@@ -100,27 +101,32 @@ def extract_tendons(words, image):
                     try:
                         measurement = "~{:.2f}{}".format((distance(xl1, yl1, xl2, yl2)/pixel_dist)*measure, unit)
                         cv2.putText(vis, f"{measurement}", (xe1, ye1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                        excel.append([" ".join(tendon.value.tolist()), measurement])
                     except Exception as e:
                         pass
                         # print("Measurement error:", e)
-                else:
-                    color = (255, 0, 0)
-                    cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
-                    cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-                    cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            else:
-                color = (0, 0, 255)
-                cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
-                cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+            #     else:
+            #         color = (255, 0, 0)
+            #         cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
+            #         cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
+            #         cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # else:
+            #     color = (0, 0, 255)
+            #     cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
+            #     cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
 
-    return vis
+    excel = pd.DataFrame(excel, columns=["Callouts", "Measurements"])
+    return vis, excel
 
 def main():
+    import pandas as pd
     word_df = pd.read_csv('/home/sadid/PycharmProjects/sgs-drawing-analysis/data/final.csv')
     os.makedirs("data", exist_ok=True)
     image = cv2.imread("data/original.png")
-    vis = extract_tendons(word_df, image)
+    vis, excel = extract_tendons(word_df, image)
+
     if vis is not None:
+        excel.to_excel("data/tendons.xlsx", index=False)
         cv2.imwrite(f"data/ocr_boxes_tendon-{0}.png", vis)
     print("Finished")
 
