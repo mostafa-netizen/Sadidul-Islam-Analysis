@@ -1,6 +1,4 @@
 import os
-import uuid
-
 import cv2
 import numpy as np
 
@@ -18,7 +16,7 @@ def find_template_location(image, template):
             continue
 
         res = cv2.matchTemplate(image, resized, cv2.TM_CCOEFF_NORMED)
-        _, val, _, loc = cv2.minMaxLoc(res)
+        j, val, k, loc = cv2.minMaxLoc(res)
 
         if best is None or val > best[0]:
             best = (val, loc, (tw, th))
@@ -233,9 +231,14 @@ def find_template_and_match(source_image):
         # # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
         # # os.makedirs("data/output", exist_ok=True)
         # # cv2.imwrite(f"data/output/{uuid.uuid4()}.png", image_r)
+        # print(templates)
+        # print(scores)
+        # print(vals)
+        # print(bboxes)
         # for t, s in zip(templates, scores):
         #     if t == "11.png":
         #         print(t, s)
+
         return True, bboxes[index], vals[index]
     else:
         return False, None, None
