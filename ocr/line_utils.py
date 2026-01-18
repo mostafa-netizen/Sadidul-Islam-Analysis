@@ -64,6 +64,35 @@ def count_text_lines(df, height_ratio=0.7):
 
     return len(lines)
 
+def detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.0, retry=3):
+    w, h = x2 - x1, y2 - y1
+    xe1, ye1, xe2, ye2 = x1 - w, y1 - int((h / line_count) * 1.5), x2 + w, y2 + int((h / line_count) * 2.7)
+    e_bbox = xe1, ye1, xe2, ye2
+    img_crop = image[ye1:ye2, xe1:xe2]
+
+    if img_crop.shape[0] > 0 and img_crop.shape[1] > 0:
+        matched, bbox, val = find_template_and_match(img_crop, m_th)
+
+        if matched:
+            xt1, yt1, xt2, yt2 = bbox
+            xt1, yt1, xt2, yt2 = xt1 + xe1, yt1 + ye1, xt2 + xe1, yt2 + ye1
+            bbox = xt1, yt1, xt2, yt2
+            found = detect_line_ending_in_bbox(final_lines, (xt1 - b_th, yt1 - b_th, xt2 + b_th, yt2 + b_th))
+            if found is not None:
+                return found, matched, bbox, val, e_bbox
+            else:
+                if retry == 0:
+                    return None, matched, bbox, val, e_bbox
+                else:
+                    return detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th + 0.5, retry=retry-1)
+        else:
+            if retry == 0:
+                return None, matched, bbox, val, e_bbox
+            else:
+                return detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th + 1.0, retry=retry - 1)
+    else:
+        return None
+
 def extract_tendons(words, image):
     text_extractor = TextExtractor(words, debug=True)
     measure, unit, pixel_dist = text_extractor.get_scale()
@@ -91,6 +120,7 @@ def extract_tendons(words, image):
     for tendon in value:
         # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         i = i + 1
+        print("tendon", i)
         is_banded = not tendon.loc[tendon.value.str.contains("BANDED")].empty
         if not is_banded:
             color = (255, 0, 0)
@@ -99,22 +129,20 @@ def extract_tendons(words, image):
 
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         line_count = count_text_lines(tendon)
-        # line_count = 1
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
-        w, h = x2 - x1, y2 - y1
-        xe1, ye1, xe2, ye2 = x1 - w, y1 - int((h/line_count) * 1.5), x2 + w, y2 + int((h/line_count) * 2.7)
-        img_crop = image[ye1:ye2, xe1:xe2]
 
         # if i != 3:
         #     continue
-        cv2.putText(vis, f"{i}", (xe1+200, ye1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        if img_crop.shape[0] > 0 and img_crop.shape[1] > 0:
-            matched, bbox, val = find_template_and_match(img_crop)
+
+        data = detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th)
+        if data is not None:
+            found, matched, bbox, val, e_bbox = data
+            xe1, ye1, xe2, ye2 = e_bbox
+
+            cv2.putText(vis, f"{i}", (xe1+200, ye1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
             if matched:
                 xt1, yt1, xt2, yt2 = bbox
-                xt1, yt1, xt2, yt2 = xt1 + xe1, yt1 + ye1, xt2 + xe1, yt2 + ye1
-                found = detect_line_ending_in_bbox(final_lines, (xt1 - b_th, yt1 - b_th, xt2 + b_th, yt2 + b_th))
                 if found is not None:
                     cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 3)
                     cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
@@ -127,15 +155,15 @@ def extract_tendons(words, image):
                     except Exception as e:
                         pass
                         # print("Measurement error:", e)
-            #     else:
-            #         color = (255, 0, 0)
-            #         cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
-            #         cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-            #         cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            # else:
-            #     color = (0, 0, 255)
-            #     cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
-            #     cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+                else:
+                    color = (255, 0, 0)
+                    cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
+                    cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
+                    cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            else:
+                color = (0, 0, 255)
+                cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
+                cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
 
     excel = pd.DataFrame(excel, columns=["Callouts", "Measurements"])
     return vis, excel

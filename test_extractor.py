@@ -5,9 +5,10 @@ from ocr.line_utils import extract_tendons
 
 def main():
     import pandas as pd
-    word_df = pd.read_csv('/home/sadid/PycharmProjects/sgs-drawing-analysis/data/final.csv')
+    i = 0
+    word_df = pd.read_csv(f'/home/sadid/PycharmProjects/sgs-drawing-analysis/data/final{i}.csv')
     os.makedirs("data", exist_ok=True)
-    image = cv2.imread("data/original.png")
+    image = cv2.imread(f"data/original{i}.png")
     vis, excel = extract_tendons(word_df, image)
 
     if vis is not None:

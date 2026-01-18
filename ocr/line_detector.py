@@ -222,7 +222,7 @@ def bbox_position(bbox, img_shape):
     else:
         return "bottom" if dy > 0 else "top"
 
-def find_template_and_match(source_image):
+def find_template_and_match(source_image, thresh=2):
     image = source_image.copy()
     template_vals = {
         "1.png": ([3, 100], 'left'),
@@ -252,17 +252,23 @@ def find_template_and_match(source_image):
         r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
         if r is not None:
             score, bbox, val = r
-            bboxes.append(bbox)
-            scores.append(score)
-            vals.append(val)
-            templates.append(template)
+            if score < thresh:
+                bboxes.append(bbox)
+                scores.append(score)
+                vals.append(val)
+                templates.append(template)
 
     if len(scores) > 0:
         indexes = np.argsort(scores)
         index = 0
+        found = False
         for index in indexes:
             if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
+                found = True
                 break
+
+        if not found:
+            index = indexes[0]
 
         return True, bboxes[index], vals[index]
     else:
