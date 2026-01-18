@@ -156,6 +156,15 @@ def find_contours(image_cropped):
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
+def contour_orientation(cnt):
+    pts = cnt.reshape(-1, 2).astype(np.float32)
+    mean = np.mean(pts, axis=0)
+    pts -= mean
+
+    _, eigenvectors = cv2.PCACompute(pts, mean=None)
+    angle = np.arctan2(eigenvectors[0,1], eigenvectors[0,0])
+    return np.degrees(angle)
+
 def match_contours(source_cnt, image_crop, area):
     target_cnt_s = find_contours(image_crop)
     # image_copy = image_crop.copy()
@@ -165,8 +174,15 @@ def match_contours(source_cnt, image_crop, area):
         # if r < 50 and cv2.contourArea(c) > 200:
         if cv2.contourArea(c) > area:
             r = cv2.matchShapes(source_cnt, c, cv2.CONTOURS_MATCH_I1, 0.0)
-            scores.append(r)
-            cnt_s.append(c)
+            angle_src = contour_orientation(source_cnt)
+            angle_c = contour_orientation(c)
+
+            angle_diff = abs(angle_src - angle_c)
+            angle_diff = min(angle_diff, 360 - angle_diff)
+
+            if angle_diff < 15:
+                scores.append(r)
+                cnt_s.append(c)
 
     return scores, cnt_s
 
@@ -190,35 +206,50 @@ def find_matched(image, template, template_val):
         return scores[index], bbox, val
     return None
 
+def bbox_position(bbox, img_shape):
+    h, w = img_shape[:2]
+    cx_img, cy_img = w / 2, h / 2
+
+    x1, y1, x2, y2 = bbox
+    cx_box = (x1 + x2) / 2
+    cy_box = (y1 + y2) / 2
+
+    dx = cx_box - cx_img
+    dy = cy_box - cy_img
+
+    if abs(dx) > abs(dy):
+        return "right" if dx > 0 else "left"
+    else:
+        return "bottom" if dy > 0 else "top"
 
 def find_template_and_match(source_image):
     image = source_image.copy()
     template_vals = {
-        "1.png": [3, 100],
-        "2.png": [6, 100],
-        "3.png": [2, 100],
-        "4.png": [0, 100],
-        "5.png": [0, 100],
-        "6.png": [3, 100],
-        "7.png": [2, 100],
-        "8.png": [2, 100],
-        "9.png": [2, 100],
-        "10.png": [3, 100],
-        "11.png": [1, 100],
-        "bottom-left.png": [5, 200],
-        "left-bottom.png": [2, 200],
-        "left-bottom-0.png": [1, 200],
-        "left-top.png": [2, 200],
-        "left-top-0.png": [1, 200],
-        "left-top-bottom.png": [1, 200],
+        "1.png": ([3, 100], 'left'),
+        "2.png": ([6, 100], 'left'),
+        "3.png": ([2, 100], 'left'),
+        "4.png": ([0, 100], 'left'),
+        "5.png": ([0, 100], 'right'),
+        "6.png": ([3, 100], 'top'),
+        "7.png": ([2, 100], 'right'),
+        "8.png": ([2, 100], 'right'),
+        "9.png": ([2, 100], 'right'),
+        "10.png": ([3, 100], 'right'),
+        "11.png": ([1, 100], 'right'),
+        "bottom-left.png": ([5, 200], 'right'),
+        "left-bottom.png": ([2, 200], 'right'),
+        "left-bottom-0.png": ([1, 200], 'right'),
+        "left-top.png": ([2, 200], 'right'),
+        "left-top-0.png": ([1, 200], 'right'),
     }
+
 
     bboxes = []
     scores = []
     vals = []
     templates = []
     for template in os.listdir("img_templates"):
-        r = find_matched(image, f"img_templates/{template}", template_vals[template])
+        r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
         if r is not None:
             score, bbox, val = r
             bboxes.append(bbox)
@@ -227,17 +258,11 @@ def find_template_and_match(source_image):
             templates.append(template)
 
     if len(scores) > 0:
-        index = np.argmin(scores)
-        # # cv2.drawContours(image, [cnt_s[2]], -1, (0, 255, 0), 3)
-        # # os.makedirs("data/output", exist_ok=True)
-        # # cv2.imwrite(f"data/output/{uuid.uuid4()}.png", image_r)
-        # print(templates)
-        # print(scores)
-        # print(vals)
-        # print(bboxes)
-        # for t, s in zip(templates, scores):
-        #     if t == "11.png":
-        #         print(t, s)
+        indexes = np.argsort(scores)
+        index = 0
+        for index in indexes:
+            if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
+                break
 
         return True, bboxes[index], vals[index]
     else:
