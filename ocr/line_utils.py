@@ -64,7 +64,10 @@ def count_text_lines(df, height_ratio=0.7):
 
     return len(lines)
 
-def detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.0, c_left=0.0, c_right=1.0, c_up=1.0, c_down=2.0, retry=0):
+def detect_template_and_line(
+        image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.0, c_left=0.0, c_right=0.60, c_up=1.0, c_down=2.0,
+        retry=0
+):
     w, h = x2 - x1, y2 - y1
     xe1, ye1, xe2, ye2 = x1 - int(w * c_left), y1 - int((h / line_count) * c_up), x2 + int(w * c_right), y2 + int((h / line_count) * c_down)
     e_bbox = xe1, ye1, xe2, ye2
@@ -83,22 +86,18 @@ def detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_t
                 return found, matched, bbox, val, e_bbox
 
         if not matched or found is None:
-            dimension_increase_rate = 0.4
+            vertical = 0.45
+            horizontal = 0.2
             if retry < 2:
-                c_up, c_down = c_up + dimension_increase_rate, c_down + dimension_increase_rate
-                print(f"retry right {retry} {c_up} {c_down} {c_left} {c_right}")
+                c_up, c_down, c_right = c_up + vertical, c_down + vertical, c_right + horizontal
             elif retry == 2:
-                c_up, c_down, c_left, c_right = 1.0, 2.0, 1, 0
-                print(f"retry left first {retry} {c_up} {c_down} {c_left} {c_right}")
+                c_up, c_down, c_left, c_right = 1.0, 2.0, 0.6, 0
             elif retry < 5:
-                c_up, c_down = c_up + dimension_increase_rate, c_down + dimension_increase_rate
-                print(f"retry left {retry} {c_up} {c_down} {c_left} {c_right}")
+                c_up, c_down, c_left = c_up + vertical, c_down + vertical, c_left + horizontal
             elif retry == 5:
-                c_up, c_down, c_left, c_right = 1.0, 2.0, 1, 1
-                print(f"retry both first {retry} {c_up} {c_down} {c_left} {c_right}")
+                c_up, c_down, c_left, c_right = 1.0, 2.0, 0.6, 0.6
             elif retry < 8:
-                c_up, c_down = c_up + dimension_increase_rate, c_down + dimension_increase_rate
-                print(f"retry both {retry} {c_up} {c_down} {c_left} {c_right}")
+                c_up, c_down, c_left, c_right = c_up + vertical, c_down + vertical, c_left + horizontal, c_right + horizontal
             else:
                 return None, matched, bbox, val, e_bbox
 

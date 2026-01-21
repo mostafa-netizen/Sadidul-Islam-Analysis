@@ -224,9 +224,10 @@ def bbox_position(bbox, img_shape):
     else:
         return "bottom" if dy > 0 else "top"
 
-def select_one(image, idx, bboxes, template_vals, templates, vals, thresh=2, retry=0):
-    indexes = idx.copy()
-    indexes = indexes[indexes < thresh]
+def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, retry=0):
+    _scores = np.array(scores)
+    _scores = _scores[_scores < thresh]
+    indexes = np.argsort(_scores)
     index = 0
     found = False
     for index in indexes:
@@ -235,9 +236,8 @@ def select_one(image, idx, bboxes, template_vals, templates, vals, thresh=2, ret
             break
 
     if not found:
-        if retry < 5:
-            print("thresh retry")
-            return select_one(image, indexes, bboxes, template_vals, templates, vals, thresh+1, retry + 1)
+        if retry < 3:
+            return select_one(image, scores, bboxes, template_vals, templates, vals, thresh+1, retry + 1)
         # index = indexes[0]
         return False, None, None
 
@@ -262,8 +262,8 @@ def find_template_and_match(source_image, thresh=2):
         "left-bottom-0.png": ([1, 200], 'right'),
         "left-top.png": ([2, 200], 'right'),
         "left-top-0.png": ([1, 200], 'right'),
+        "left-top-bottom-0.png": ([0, 300], 'right'),
     }
-
 
     bboxes = []
     scores = []
@@ -279,8 +279,7 @@ def find_template_and_match(source_image, thresh=2):
             templates.append(template)
 
     if len(scores) > 0:
-        indexes = np.argsort(scores)
-        return select_one(image, indexes, bboxes, template_vals, templates, vals, thresh)
+        return select_one(image, scores, bboxes, template_vals, templates, vals, thresh)
     else:
         return False, None, None
 
