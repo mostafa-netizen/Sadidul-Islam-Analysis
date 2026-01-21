@@ -153,7 +153,10 @@ def find_contours(image_cropped):
     gray = cv2.cvtColor(image_cropped, cv2.COLOR_BGR2GRAY)
     inverted_image = cv2.bitwise_not(gray)
     _, thresh = cv2.threshold(inverted_image, 100, 255, 0)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    dilated = cv2.dilate(thresh, kernel, iterations=1)
+    contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
 def contour_orientation(cnt):
@@ -201,7 +204,8 @@ def find_matched(image, template, template_val):
     val, bbox, img_crop = crop_template_location(image, template)
     if val is None or bbox is None:
         return None
-    scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
+    # scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
+    scores, cnt_s = match_contours(cnt_s[0], img_crop, template_val[1])
     if len(scores) > 0:
         index = np.argmin(scores)
 
@@ -231,7 +235,11 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
     index = 0
     found = False
     for index in indexes:
+        print(index, scores[index])
+        print(templates)
+        print(bbox_position(bboxes[index], image.shape), template_vals[templates[index]][1])
         if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
+            print(index, scores[index])
             print(scores)
             print(templates)
 
@@ -239,8 +247,8 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
             break
 
     if not found:
-        if retry < 3:
-            return select_one(image, scores, bboxes, template_vals, templates, vals, thresh+1, retry + 1)
+        # if retry < 3:
+        #     return select_one(image, scores, bboxes, template_vals, templates, vals, thresh+1, retry + 1)
         # index = indexes[0]
         return False, None, None
 
@@ -249,30 +257,32 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
 def find_template_and_match(source_image, thresh=2):
     image = source_image.copy()
     template_vals = {
-        "1.png": ([3, 100], 'left'),
-        "2.png": ([6, 100], 'left'),
-        "3.png": ([2, 100], 'left'),
-        "4.png": ([0, 100], 'left'),
-        "5.png": ([0, 100], 'right'),
-        "6.png": ([3, 100], 'top'),
-        "7.png": ([2, 100], 'right'),
-        "8.png": ([2, 100], 'right'),
-        "9.png": ([2, 100], 'right'),
-        "10.png": ([3, 100], 'right'),
-        "11.png": ([1, 100], 'right'),
+        # "1.png": ([3, 100], 'left'),
+        # "2.png": ([6, 100], 'left'),
+        # "3.png": ([2, 100], 'left'),
+        # "4.png": ([0, 100], 'left'),
+        # "5.png": ([0, 100], 'right'),
+        # "6.png": ([3, 100], 'top'),
+        # "7.png": ([2, 100], 'right'),
+        # "8.png": ([2, 100], 'right'),
+        # "9.png": ([2, 100], 'right'),
+        # "10.png": ([3, 100], 'right'),
+        # "11.png": ([1, 100], 'right'),
         "bottom-left.png": ([5, 200], 'right'),
         "left-bottom.png": ([2, 200], 'right'),
         "left-bottom-0.png": ([1, 200], 'right'),
         "left-top.png": ([2, 200], 'right'),
-        "left-top-0.png": ([1, 200], 'right'),
+        "left-top-0.png": ([1, 200], 'left'),
         "left-top-bottom-0.png": ([0, 300], 'right'),
+        "2-lines-indicator.png": ([0, 300], 'right'),
     }
 
     bboxes = []
     scores = []
     vals = []
     templates = []
-    for template in os.listdir("img_templates"):
+    # for template in os.listdir("img_templates"):
+    for template in template_vals.keys():
         r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
         if r is not None:
             score, bbox, val = r

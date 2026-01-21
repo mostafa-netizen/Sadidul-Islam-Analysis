@@ -17,8 +17,8 @@ def main():
 
     images = convert_from_path(input_path)
     images = [
-        # images[8],
-        images[10],
+        images[8],
+        # images[10],
         # images[12]
     ]
     print("Total images: ", len(images))
