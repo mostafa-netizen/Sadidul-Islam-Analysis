@@ -189,7 +189,7 @@ def match_contours(source_cnt, image_crop, area):
 def crop_template_location(image, template):
     val, bbox = find_template_location(image, template)
     if val is None or bbox is None:
-        return False, bbox
+        return False, bbox, None
 
     x1, y1, x2, y2 = bbox
     img_crop = image[y1:y2, x1:x2]
@@ -199,6 +199,8 @@ def find_matched(image, template, template_val):
     template = cv2.imread(template, cv2.IMREAD_COLOR)
     cnt_s = find_contours(template)
     val, bbox, img_crop = crop_template_location(image, template)
+    if val is None or bbox is None:
+        return None
     scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
     if len(scores) > 0:
         index = np.argmin(scores)
@@ -221,6 +223,25 @@ def bbox_position(bbox, img_shape):
         return "right" if dx > 0 else "left"
     else:
         return "bottom" if dy > 0 else "top"
+
+def select_one(image, idx, bboxes, template_vals, templates, vals, thresh=2, retry=0):
+    indexes = idx.copy()
+    indexes = indexes[indexes < thresh]
+    index = 0
+    found = False
+    for index in indexes:
+        if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
+            found = True
+            break
+
+    if not found:
+        if retry < 5:
+            print("thresh retry")
+            return select_one(image, indexes, bboxes, template_vals, templates, vals, thresh+1, retry + 1)
+        # index = indexes[0]
+        return False, None, None
+
+    return True, bboxes[index], vals[index]
 
 def find_template_and_match(source_image, thresh=2):
     image = source_image.copy()
@@ -252,33 +273,20 @@ def find_template_and_match(source_image, thresh=2):
         r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
         if r is not None:
             score, bbox, val = r
-            if score < thresh:
-                bboxes.append(bbox)
-                scores.append(score)
-                vals.append(val)
-                templates.append(template)
+            bboxes.append(bbox)
+            scores.append(score)
+            vals.append(val)
+            templates.append(template)
 
     if len(scores) > 0:
         indexes = np.argsort(scores)
-        index = 0
-        found = False
-        for index in indexes:
-            if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
-                found = True
-                break
-
-        if not found:
-            index = indexes[0]
-
-        return True, bboxes[index], vals[index]
+        return select_one(image, indexes, bboxes, template_vals, templates, vals, thresh)
     else:
         return False, None, None
-
 
 def point_inside_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox
     return bx1 <= x <= bx2 and by1 <= y <= by2
-
 
 def distance_point_to_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox

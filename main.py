@@ -16,7 +16,11 @@ def main():
     gpu = True
 
     images = convert_from_path(input_path)
-    images = [images[8], images[10], images[12]]
+    images = [
+        images[8],
+        images[10],
+        images[12]
+    ]
     print("Total images: ", len(images))
     os.makedirs("data/final_output", exist_ok=True)
     progress = tqdm.tqdm(total=len(images))
@@ -28,6 +32,7 @@ def main():
         # df_final.to_csv(f"data/final{i}.csv", index=False)
         vis, excel = extract_tendons(df_final, drawing)
         excel["page"] = i + 1
+        print("page: ", i + 1)
         excels.append(excel)
         cv2.imwrite(f"data/final_output/tendons-{i}.png", vis)
         progress.update(1)
