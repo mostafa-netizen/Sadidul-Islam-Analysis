@@ -147,8 +147,8 @@ def extract_tendons(words, image):
         line_count = count_text_lines(tendon)
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
 
-        # if i != 3:
-        #     continue
+        if i != 3:
+            continue
 
         data = detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th)
         if data is not None:

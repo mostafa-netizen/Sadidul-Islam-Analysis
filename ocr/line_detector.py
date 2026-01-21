@@ -226,12 +226,15 @@ def bbox_position(bbox, img_shape):
 
 def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, retry=0):
     _scores = np.array(scores)
-    _scores = _scores[_scores < thresh]
+    # _scores = _scores[_scores < thresh]
     indexes = np.argsort(_scores)
     index = 0
     found = False
     for index in indexes:
         if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
+            print(scores)
+            print(templates)
+
             found = True
             break
 
