@@ -269,12 +269,18 @@ def find_template_and_match(source_image, thresh=2):
         # "10.png": ([3, 100], 'right'),
         # "11.png": ([1, 100], 'right'),
         "bottom-left.png": ([5, 200], 'right'),
+        "bottom-left-0.png": ([5, 200], 'right'),
+        "bottom-left-1.png": ([5, 200], 'right'),
+        "bottom-right-0.png": ([5, 200], 'left'),
         "left-bottom.png": ([2, 200], 'right'),
         "left-bottom-0.png": ([1, 200], 'right'),
         "left-top.png": ([2, 200], 'right'),
-        "left-top-0.png": ([1, 200], 'left'),
+        "left-top-0.png": ([1, 200], 'right'),
+        "left-top-1.png": ([1, 200], 'right'),
+        "left-top-2.png": ([1, 200], 'right'),
+        "left-top-3.png": ([1, 200], 'right'),
         "left-top-bottom-0.png": ([0, 300], 'right'),
-        "2-lines-indicator.png": ([0, 300], 'right'),
+        # "2-lines-indicator.png": ([0, 300], 'right'),
     }
 
     bboxes = []
