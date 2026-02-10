@@ -39,15 +39,19 @@ def main():
         # df_final.to_csv(f"{cache_ocr}/original{i}.csv", index=False)
         vis, excel = extract_post_tension_tendons(df_final, drawing)
         # vis, excel = extract_tendons(df_final, drawing)
-        excel["page"] = i + 1
-        excels.append(excel)
+        if excel is not None:
+            excel["page"] = i + 1
+            excels.append(excel)
         cv2.imwrite(f"data/final_output/tendons-{i}.png", vis)
         progress.update(1)
 
-    excels = pd.concat(excels)
-    print("Total tendons: ", len(excels))
-    print(excels.head())
-    excels.to_excel("data/final_output/tendons.xlsx", index=False)
+    if len(excels) > 0:
+        excels = pd.concat(excels)
+        print("Total tendons: ", len(excels))
+        print(excels.head())
+        excels.to_excel("data/final_output/tendons.xlsx", index=False)
+    else:
+        print("No tendons found")
 
 
 if __name__ == '__main__':
