@@ -88,6 +88,7 @@ class OCR:
                 else:
                     results.append(None)
         except Exception as e:
+            results = [None] * len(doc)
             if self.debug:
                 print(e)
 

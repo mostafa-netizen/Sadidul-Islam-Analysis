@@ -100,14 +100,15 @@ def tile_ocr(drawing, gpu, batch_size=2) -> pd.DataFrame:
     full_h, full_w = drawing.shape[:2]
     tiles = crop_tiles(drawing)
     docs = [tile["image"] for tile in tiles]
-    ocr = OCR(gpu=gpu)
+    ocr = OCR(gpu=gpu, debug=False)
     results = []
 
     for batch in list(batched(docs, batch_size)):
         if len(batch) == 0:
             break
 
-        results.extend(ocr.from_image(list(batch)))
+        result = ocr.from_image(list(batch))
+        results.extend(result)
 
     all_dfs = []
     for i in range(len(tiles)):
