@@ -40,7 +40,6 @@ class TextExtractor(BaseExtractor):
             if tendon.shape[0] > 0:
                 tendons.append(tendon)
 
-        print(tendons)
         return tendons
 
     def get_tendons(self, debug=False, keyword="TENDON"):

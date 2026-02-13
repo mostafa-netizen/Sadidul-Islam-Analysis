@@ -26,7 +26,7 @@ def extract_post_tension_tendons(words, image):
     for x1, y1, x2, y2 in final_lines:
         cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-    b_th = 10
+    b_th = 0.5
     i = 0
     excel = []
     for tendon in value:
@@ -39,7 +39,7 @@ def extract_post_tension_tendons(words, image):
 
         if data is not None:
             found, matched, bbox, val, e_bbox = data
-            print(bbox, matched)
+            # print(bbox, matched)
 
             xe1, ye1, xe2, ye2 = e_bbox
             cv2.putText(vis, f"{i}", (xe1+200, ye1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)

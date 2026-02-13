@@ -10,7 +10,7 @@ def find_template_location(image, template):
     template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     best = None
 
-    for scale in np.linspace(0.6, 1.4, 20):
+    for scale in np.linspace(3, 5, 20):
         resized = cv2.resize(template, None, fx=scale, fy=scale)
         th, tw = resized.shape
 
@@ -151,12 +151,12 @@ def merge_lines(lines, dist_thresh=15):
 
     return merged
 
-def find_contours(image_cropped):
+def find_contours(image_cropped, ksize=(10, 10)):
     gray = cv2.cvtColor(image_cropped, cv2.COLOR_BGR2GRAY)
     inverted_image = cv2.bitwise_not(gray)
     _, thresh = cv2.threshold(inverted_image, 100, 255, 0)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, ksize)
     dilated = cv2.dilate(thresh, kernel, iterations=1)
     contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     return contours
@@ -170,8 +170,8 @@ def contour_orientation(cnt):
     angle = np.arctan2(eigenvectors[0,1], eigenvectors[0,0])
     return np.degrees(angle)
 
-def match_contours(source_cnt, image_crop, area):
-    target_cnt_s = find_contours(image_crop)
+def match_contours(source_cnt, image_crop, area, ksize=(10, 10)):
+    target_cnt_s = find_contours(image_crop, ksize=ksize)
     # image_copy = image_crop.copy()
     scores = []
     cnt_s = []
@@ -200,14 +200,14 @@ def crop_template_location(image, template):
     img_crop = image[y1:y2, x1:x2]
     return val, bbox, img_crop
 
-def find_matched(image, template, template_val):
+def find_matched(image, template, template_val, ksize=(10, 10)):
     template = cv2.imread(template, cv2.IMREAD_COLOR)
-    cnt_s = find_contours(template)
+    cnt_s = find_contours(template, ksize)
     val, bbox, img_crop = crop_template_location(image, template)
     if val is None or bbox is None:
         return None
     # scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
-    scores, cnt_s = match_contours(cnt_s[0], img_crop, template_val[1])
+    scores, cnt_s = match_contours(cnt_s[0], img_crop, template_val[1], ksize=ksize)
     if len(scores) > 0:
         index = np.argmin(scores)
 
@@ -255,14 +255,14 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
 
     return True, bboxes[index], vals[index]
 
-def template_matching(image, template_vals, thresh):
+def template_matching(image, template_vals, thresh, ksize=(10, 10)):
     bboxes = []
     scores = []
     vals = []
     templates = []
     # for template in os.listdir("img_templates"):
     for template in template_vals.keys():
-        r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
+        r = find_matched(image, f"img_templates/{template}", template_vals[template][0], ksize=ksize)
         if r is not None:
             score, bbox, val = r
             bboxes.append(bbox)
@@ -314,7 +314,7 @@ def find_post_tenson_template_and_match(source_image, thresh=2):
         # "angled-top-bottom.png": ([5, 200], 'right')
     }
 
-    return template_matching(image, template_vals, thresh)
+    return template_matching(image, template_vals, thresh, ksize=(3, 3))
 
 def point_inside_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox

@@ -111,7 +111,7 @@ def detect_template_and_line(
     return None
 
 def detect_post_tension_template_and_line(
-        image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.0, c_left=0.0, c_right=0.60, c_up=1.0, c_down=2.0,
+        image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.00, c_left=0.0, c_right=0.60, c_up=1.0, c_down=2.0,
         retry=0
 ):
     w, h = x2 - x1, y2 - y1
@@ -121,7 +121,6 @@ def detect_post_tension_template_and_line(
 
     if img_crop.shape[0] > 0 and img_crop.shape[1] > 0:
         matched, bbox, val = find_post_tenson_template_and_match(img_crop, m_th)
-        print(matched, bbox, val)
         found = None
 
         if matched:
