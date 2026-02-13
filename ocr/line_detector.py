@@ -1,4 +1,6 @@
 import os
+import uuid
+
 import cv2
 import numpy as np
 
@@ -235,17 +237,43 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
     found = False
     for index in indexes:
         if bbox_position(bboxes[index], image.shape) == template_vals[templates[index]][1]:
-            print(index, scores[index])
-            print(scores)
-            print(templates)
+            # print(index, scores[index])
+            # print(scores)
+            # print(templates)
 
             found = True
             break
 
     if not found:
         return False, None, None
+    else:
+        xt1, yt1, xt2, yt2 = bboxes[index]
+        # img = image[yt1:yt2, xt1:xt2]
+        img_copy = image.copy()
+        cv2.rectangle(img_copy, (xt1, yt1), (xt2, yt2), (255, 0, 0), 3)
+        cv2.imwrite(f"data/tests/{uuid.uuid4().hex}.jpg", img_copy)
 
     return True, bboxes[index], vals[index]
+
+def template_matching(image, template_vals, thresh):
+    bboxes = []
+    scores = []
+    vals = []
+    templates = []
+    # for template in os.listdir("img_templates"):
+    for template in template_vals.keys():
+        r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
+        if r is not None:
+            score, bbox, val = r
+            bboxes.append(bbox)
+            scores.append(score)
+            vals.append(val)
+            templates.append(template)
+
+    if len(scores) > 0:
+        return select_one(image, scores, bboxes, template_vals, templates, vals, thresh)
+    else:
+        return False, None, None
 
 def find_template_and_match(source_image, thresh=2):
     image = source_image.copy()
@@ -276,24 +304,17 @@ def find_template_and_match(source_image, thresh=2):
         # "2-lines-indicator.png": ([0, 300], 'right'),
     }
 
-    bboxes = []
-    scores = []
-    vals = []
-    templates = []
-    # for template in os.listdir("img_templates"):
-    for template in template_vals.keys():
-        r = find_matched(image, f"img_templates/{template}", template_vals[template][0])
-        if r is not None:
-            score, bbox, val = r
-            bboxes.append(bbox)
-            scores.append(score)
-            vals.append(val)
-            templates.append(template)
+    return template_matching(image, template_vals, thresh)
 
-    if len(scores) > 0:
-        return select_one(image, scores, bboxes, template_vals, templates, vals, thresh)
-    else:
-        return False, None, None
+def find_post_tenson_template_and_match(source_image, thresh=2):
+    image = source_image.copy()
+    template_vals = {
+        "angled-bottom-left.png": ([0, 200], 'right'),
+        "angled-bottom-right.png": ([0, 200], 'left'),
+        # "angled-top-bottom.png": ([5, 200], 'right')
+    }
+
+    return template_matching(image, template_vals, thresh)
 
 def point_inside_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox

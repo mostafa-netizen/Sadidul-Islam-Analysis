@@ -6,7 +6,7 @@ import pandas as pd
 
 from ocr.extractor import TextExtractor
 from ocr.line_detector import detect_lines_global, merge_lines
-from ocr.line_utils import detect_template_and_line, count_text_lines, distance
+from ocr.line_utils import detect_template_and_line, count_text_lines, distance, detect_post_tension_template_and_line
 
 
 def extract_post_tension_tendons(words, image):
@@ -35,12 +35,13 @@ def extract_post_tension_tendons(words, image):
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         line_count = count_text_lines(tendon)
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
-        data = detect_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th)
+        data = detect_post_tension_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th)
 
         if data is not None:
             found, matched, bbox, val, e_bbox = data
-            xe1, ye1, xe2, ye2 = e_bbox
+            print(bbox, matched)
 
+            xe1, ye1, xe2, ye2 = e_bbox
             cv2.putText(vis, f"{i}", (xe1+200, ye1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
             if matched:
