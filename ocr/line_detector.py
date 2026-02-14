@@ -251,6 +251,8 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
         # img = image[yt1:yt2, xt1:xt2]
         img_copy = image.copy()
         cv2.rectangle(img_copy, (xt1, yt1), (xt2, yt2), (255, 0, 0), 3)
+        cv2.putText(img_copy, "{:.2f} {}".format(vals[index], templates[index]), (xt1, yt1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        # cv2.putText(img_copy, "{:.2f}".format(_scores[index]), (xt1, yt1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.imwrite(f"data/tests/{uuid.uuid4().hex}.jpg", img_copy)
 
     return True, bboxes[index], vals[index]
@@ -311,10 +313,11 @@ def find_post_tenson_template_and_match(source_image, thresh=2):
     template_vals = {
         "angled-bottom-left.png": ([0, 200], 'right'),
         "angled-bottom-right.png": ([0, 200], 'left'),
-        # "angled-top-bottom.png": ([5, 200], 'right')
+        "angled-top-right.png": ([0, 200], 'left'),
+        "angled-top-bottom.png": ([5, 200], 'right')
     }
 
-    return template_matching(image, template_vals, thresh, ksize=(3, 3))
+    return template_matching(image, template_vals, thresh, ksize=(2, 2))
 
 def point_inside_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox

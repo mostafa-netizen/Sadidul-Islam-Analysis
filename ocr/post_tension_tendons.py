@@ -26,11 +26,12 @@ def extract_post_tension_tendons(words, image):
     for x1, y1, x2, y2 in final_lines:
         cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-    b_th = 0.5
+    b_th = 10
     i = 0
     excel = []
     for tendon in value:
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        color = (0, 255, 0)
+        # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         i = i + 1
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         line_count = count_text_lines(tendon)
