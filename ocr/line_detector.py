@@ -308,17 +308,6 @@ def find_template_and_match(source_image, thresh=2):
 
     return template_matching(image, template_vals, thresh)
 
-def find_post_tenson_template_and_match(source_image, thresh=2):
-    image = source_image.copy()
-    template_vals = {
-        "angled-bottom-left.png": ([0, 200], 'right'),
-        "angled-bottom-right.png": ([0, 200], 'left'),
-        "angled-top-right.png": ([0, 200], 'left'),
-        "angled-top-bottom.png": ([5, 200], 'right')
-    }
-
-    return template_matching(image, template_vals, thresh, ksize=(2, 2))
-
 def point_inside_bbox(x, y, bbox):
     bx1, by1, bx2, by2 = bbox
     return bx1 <= x <= bx2 and by1 <= y <= by2

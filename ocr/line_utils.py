@@ -3,8 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from ocr.extractor import TextExtractor
-from ocr.line_detector import detect_lines_global, merge_lines, find_template_and_match, detect_line_ending_in_bbox, \
-    find_post_tenson_template_and_match
+from ocr.line_detector import detect_lines_global, merge_lines, find_template_and_match, detect_line_ending_in_bbox
 
 
 def distance(xl1, yl1, xl2, yl2):
@@ -103,51 +102,6 @@ def detect_template_and_line(
                 return None, matched, bbox, val, e_bbox
 
             return detect_template_and_line(
-                image, final_lines, x1, y1, x2, y2, line_count, b_th,
-                c_left=c_left, c_right=c_right,
-                c_up=c_up, c_down=c_down, m_th=m_th, retry=retry + 1
-            )
-
-    return None
-
-def detect_post_tension_template_and_line(
-        image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.00, c_left=0.0, c_right=0.60, c_up=1.0, c_down=2.0,
-        retry=0
-):
-    w, h = x2 - x1, y2 - y1
-    xe1, ye1, xe2, ye2 = x1 - int(w * c_left), y1 - int((h / line_count) * c_up), x2 + int(w * c_right), y2 + int((h / line_count) * c_down)
-    e_bbox = xe1, ye1, xe2, ye2
-    img_crop = image[ye1:ye2, xe1:xe2]
-
-    if img_crop.shape[0] > 0 and img_crop.shape[1] > 0:
-        matched, bbox, val = find_post_tenson_template_and_match(img_crop, m_th)
-        found = None
-
-        if matched:
-            xt1, yt1, xt2, yt2 = bbox
-            xt1, yt1, xt2, yt2 = xt1 + xe1, yt1 + ye1, xt2 + xe1, yt2 + ye1
-            bbox = xt1, yt1, xt2, yt2
-            found = detect_line_ending_in_bbox(final_lines, (xt1 - b_th, yt1 - b_th, xt2 + b_th, yt2 + b_th))
-            if found is not None:
-                return found, matched, bbox, val, e_bbox
-
-        if not matched or found is None:
-            vertical = 0.45
-            horizontal = 0.2
-            if retry < 2:
-                c_up, c_down, c_right = c_up + vertical, c_down + vertical, c_right + horizontal
-            elif retry == 2:
-                c_up, c_down, c_left, c_right = 1.0, 2.0, 0.6, 0
-            elif retry < 5:
-                c_up, c_down, c_left = c_up + vertical, c_down + vertical, c_left + horizontal
-            elif retry == 5:
-                c_up, c_down, c_left, c_right = 1.0, 2.0, 0.6, 0.6
-            elif retry < 8:
-                c_up, c_down, c_left, c_right = c_up + vertical, c_down + vertical, c_left + horizontal, c_right + horizontal
-            else:
-                return None, matched, bbox, val, e_bbox
-
-            return detect_post_tension_template_and_line(
                 image, final_lines, x1, y1, x2, y2, line_count, b_th,
                 c_left=c_left, c_right=c_right,
                 c_up=c_up, c_down=c_down, m_th=m_th, retry=retry + 1
