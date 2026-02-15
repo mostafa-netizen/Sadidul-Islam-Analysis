@@ -52,9 +52,9 @@ def tile_image(img, tile_size=1500, overlap=300):
     return tiles
 
 def detect_vertical_lines(tile):
-    bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
+    # bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
-    vertical = cv2.morphologyEx(bw, cv2.MORPH_OPEN, kernel)
+    vertical = cv2.morphologyEx(tile, cv2.MORPH_OPEN, kernel)
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5)))
     bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 100))
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_CLOSE, bridge_kernel)
@@ -74,10 +74,10 @@ def detect_vertical_lines(tile):
     return final_lines
 
 def detect_horizontal_lines(tile):
-    bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
+    # bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
 
-    horizontal = cv2.morphologyEx(bw, cv2.MORPH_OPEN, kernel)
+    horizontal = cv2.morphologyEx(tile, cv2.MORPH_OPEN, kernel)
     horizontal = cv2.morphologyEx(horizontal, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 1)))
     bridge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 1))
     horizontal = cv2.morphologyEx(horizontal, cv2.MORPH_CLOSE, bridge_kernel)
@@ -253,7 +253,7 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
         cv2.rectangle(img_copy, (xt1, yt1), (xt2, yt2), (255, 0, 0), 3)
         cv2.putText(img_copy, "{:.2f} {}".format(vals[index], templates[index]), (xt1, yt1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         # cv2.putText(img_copy, "{:.2f}".format(_scores[index]), (xt1, yt1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imwrite(f"data/tests/{uuid.uuid4().hex}.jpg", img_copy)
+        cv2.imwrite(f"data/debug/{uuid.uuid4().hex}.jpg", img_copy)
 
     return True, bboxes[index], vals[index]
 

@@ -75,12 +75,20 @@ def extract_post_tension_tendons(words, image):
     kernel = np.ones((2, 2), np.uint8)
     erode = cv2.erode(thresh, kernel)
 
+    blur = cv2.GaussianBlur(erode, (7, 7), 0)
+    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
+    erode = cv2.erode(thresh, kernel)
+
+    blur = cv2.GaussianBlur(erode, (5, 5), 0)
+    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
+    erode = cv2.erode(thresh, kernel)
+
     raw_lines = detect_lines_global(erode)
     final_lines = merge_lines(raw_lines)
 
     vis = image.copy()
-    # for x1, y1, x2, y2 in final_lines:
-    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    for x1, y1, x2, y2 in final_lines:
+        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     b_th = 10
     i = 0

@@ -1,4 +1,6 @@
 import os
+import shutil
+
 import numpy as np
 import tqdm
 from pdf2image import convert_from_path
@@ -28,7 +30,17 @@ def main():
         images[4],
     ]
     print("Total images: ", len(images))
-    os.makedirs("data/final_output", exist_ok=True)
+
+    directory_path = "data/final_output"
+    debug_path = "data/debug"
+    print("removing old files...")
+    if os.path.exists(debug_path) and os.path.isdir(debug_path):
+        shutil.rmtree(debug_path)
+    os.makedirs(debug_path, exist_ok=True)
+    if os.path.exists(directory_path) and os.path.isdir(directory_path):
+        shutil.rmtree(directory_path)
+    os.makedirs(directory_path, exist_ok=True)
+
     progress = tqdm.tqdm(total=len(images))
     excels = []
     for i, drawing in enumerate(images):
@@ -42,14 +54,14 @@ def main():
         if excel is not None:
             excel["page"] = i + 1
             excels.append(excel)
-        cv2.imwrite(f"data/final_output/tendons-{i}.png", vis)
+        cv2.imwrite(f"{directory_path}/tendons-{i}.png", vis)
         progress.update(1)
 
     if len(excels) > 0:
         excels = pd.concat(excels)
         print("Total tendons: ", len(excels))
         print(excels.head())
-        excels.to_excel("data/final_output/tendons.xlsx", index=False)
+        excels.to_excel(f"{directory_path}/tendons.xlsx", index=False)
     else:
         print("No tendons found")
 
