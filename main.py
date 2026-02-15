@@ -49,6 +49,7 @@ def main():
         df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
         # cv2.imwrite(f"{cache_ocr}/original{i}.png", drawing)
         # df_final.to_csv(f"{cache_ocr}/original{i}.csv", index=False)
+
         vis, excel = extract_post_tension_tendons(df_final, drawing)
         # vis, excel = extract_tendons(df_final, drawing)
         if excel is not None:

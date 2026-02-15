@@ -127,8 +127,8 @@ def extract_tendons(words, image):
     final_lines = merge_lines(raw_lines)
 
     vis = image.copy()
-    # for x1, y1, x2, y2 in final_lines:
-    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    for x1, y1, x2, y2 in final_lines:
+        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     b_th = 10
     i = 0

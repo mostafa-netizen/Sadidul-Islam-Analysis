@@ -51,8 +51,9 @@ def tile_image(img, tile_size=1500, overlap=300):
 
     return tiles
 
-def detect_vertical_lines(tile):
-    # bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
+def detect_vertical_lines(tile, process=True):
+    if process:
+        tile = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
     vertical = cv2.morphologyEx(tile, cv2.MORPH_OPEN, kernel)
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5)))
@@ -73,8 +74,9 @@ def detect_vertical_lines(tile):
 
     return final_lines
 
-def detect_horizontal_lines(tile):
-    # bw = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
+def detect_horizontal_lines(tile, process=True):
+    if process:
+        tile = cv2.adaptiveThreshold(tile, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 3)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
 
     horizontal = cv2.morphologyEx(tile, cv2.MORPH_OPEN, kernel)
@@ -96,16 +98,16 @@ def detect_horizontal_lines(tile):
 
     return final_lines
 
-def detect_lines(tile):
-    return detect_horizontal_lines(tile) + detect_vertical_lines(tile)
+def detect_lines(tile, process=True):
+    return detect_horizontal_lines(tile, process) + detect_vertical_lines(tile, process)
 
-def detect_lines_global(img):
+def detect_lines_global(img, process=True):
 
     tiles = tile_image(img)
     global_lines = []
 
     for tile, offset_x, offset_y in tiles:
-        lines = detect_lines(tile)
+        lines = detect_lines(tile, process)
         for x1, y1, x2, y2 in lines:
             global_lines.append((
                 x1 + offset_x,

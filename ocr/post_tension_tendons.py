@@ -84,7 +84,7 @@ def extract_post_tension_tendons(words, image):
     erode = cv2.erode(thresh, kernel)
 
     raw_lines = detect_lines_global(erode)
-    final_lines = merge_lines(raw_lines)
+    final_lines = merge_lines(raw_lines, 5)
 
     vis = image.copy()
     for x1, y1, x2, y2 in final_lines:
