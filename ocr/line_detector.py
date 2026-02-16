@@ -4,13 +4,18 @@ import uuid
 import cv2
 import numpy as np
 
+def is_grayscale(img):
+    return len(img.shape) == 2
 
-def find_template_location(image, template):
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+def find_template_location(image, template, start=0.8, stop=1.5, num=20):
+    if not is_grayscale(image):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if not is_grayscale(template):
+        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
     best = None
 
-    for scale in np.linspace(3, 5, 20):
+    for scale in np.linspace(start, stop, num):
         resized = cv2.resize(template, None, fx=scale, fy=scale)
         th, tw = resized.shape
 
@@ -193,8 +198,8 @@ def match_contours(source_cnt, image_crop, area, ksize=(10, 10)):
 
     return scores, cnt_s
 
-def crop_template_location(image, template):
-    val, bbox = find_template_location(image, template)
+def crop_template_location(image, template, start=0.8, stop=1.5, num=20):
+    val, bbox = find_template_location(image, template, start, stop, num)
     if val is None or bbox is None:
         return False, bbox, None
 
@@ -202,10 +207,10 @@ def crop_template_location(image, template):
     img_crop = image[y1:y2, x1:x2]
     return val, bbox, img_crop
 
-def find_matched(image, template, template_val, ksize=(10, 10)):
+def find_matched(image, template, template_val, ksize=(10, 10), start=0.8, stop=1.5, num=20):
     template = cv2.imread(template, cv2.IMREAD_COLOR)
     cnt_s = find_contours(template, ksize)
-    val, bbox, img_crop = crop_template_location(image, template)
+    val, bbox, img_crop = crop_template_location(image, template, start, stop, num)
     if val is None or bbox is None:
         return None
     # scores, cnt_s = match_contours(cnt_s[template_val[0]], img_crop, template_val[1])
@@ -259,14 +264,14 @@ def select_one(image, scores, bboxes, template_vals, templates, vals, thresh=2, 
 
     return True, bboxes[index], vals[index]
 
-def template_matching(image, template_vals, thresh, ksize=(10, 10)):
+def template_matching(image, template_vals, thresh, ksize=(10, 10), start=0.8, stop=1.5, num=20):
     bboxes = []
     scores = []
     vals = []
     templates = []
     # for template in os.listdir("img_templates"):
     for template in template_vals.keys():
-        r = find_matched(image, f"img_templates/{template}", template_vals[template][0], ksize=ksize)
+        r = find_matched(image, f"img_templates/{template}", template_vals[template][0], ksize, start, stop, num)
         if r is not None:
             score, bbox, val = r
             bboxes.append(bbox)

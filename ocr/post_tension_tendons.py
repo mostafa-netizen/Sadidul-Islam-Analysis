@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 
 from ocr.extractor import TextExtractor
-from ocr.line_detector import detect_lines_global, merge_lines, detect_line_ending_in_bbox, template_matching
+from ocr.line_detector import detect_lines_global, merge_lines, detect_line_ending_in_bbox, template_matching, \
+    is_grayscale, find_template_location
 from ocr.line_utils import count_text_lines
 
 
@@ -18,7 +19,36 @@ def find_post_tenson_template_and_match(source_image, thresh=2.0):
         "angled-top-bottom.png": ([5, 200], 'right')
     }
 
-    return template_matching(image, template_vals, thresh, ksize=(2, 2))
+    return template_matching(image, template_vals, thresh, ksize=(2, 2), start=3, stop=5, num=20)
+
+def remove_noise(img_gray):
+    if not is_grayscale(img_gray):
+        img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(img_gray, 80, 255, cv2.THRESH_BINARY_INV)
+    kernel = np.ones((2, 2), np.uint8)
+    erode = cv2.erode(thresh, kernel)
+
+    blur = cv2.GaussianBlur(erode, (7, 7), 0)
+    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
+    erode = cv2.erode(thresh, kernel)
+
+    blur = cv2.GaussianBlur(erode, (5, 5), 0)
+    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
+    erode = cv2.erode(thresh, kernel)
+
+    return erode
+
+def detect_line_features(source_img, template_img, start=0.8, stop=1.5, num=20):
+    source_img = remove_noise(source_img)
+    features = []
+    crop_length = 200
+    for i in range(int(source_img.shape[1]/crop_length)):
+        xe1, xe2 = (i*crop_length), (i+1)*crop_length
+        score, (x1, y1, x2, y2) = find_template_location(source_img[0:100, xe1:xe2], template_img, start=start, stop=stop, num=num)
+        if score > 0.8:
+            features.append([x1+(i*crop_length), y1, x2+(i*crop_length), y2])
+
+    return features
 
 def detect_post_tension_template_and_line(
         image, final_lines, x1, y1, x2, y2, line_count, b_th, m_th=2.00, c_left=0.0, c_right=0.60, c_up=1.0, c_down=2.0,
@@ -70,18 +100,7 @@ def extract_post_tension_tendons(words, image):
     value = text_extractor.get_post_tenson_tendons()
     height, width = image.shape[:2]
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
-    kernel = np.ones((2, 2), np.uint8)
-    erode = cv2.erode(thresh, kernel)
-
-    blur = cv2.GaussianBlur(erode, (7, 7), 0)
-    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
-    erode = cv2.erode(thresh, kernel)
-
-    blur = cv2.GaussianBlur(erode, (5, 5), 0)
-    ret, thresh = cv2.threshold(blur, 80, 255, cv2.THRESH_BINARY_INV)
-    erode = cv2.erode(thresh, kernel)
+    erode = remove_noise(image)
 
     raw_lines = detect_lines_global(erode)
     final_lines = merge_lines(raw_lines, 5)
