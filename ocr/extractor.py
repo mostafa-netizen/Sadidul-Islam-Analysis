@@ -1,5 +1,6 @@
 import re
 
+import numpy as np
 import pandas as pd
 
 from ocr.base_extractor import BaseExtractor
@@ -41,6 +42,35 @@ class TextExtractor(BaseExtractor):
                 tendons.append(tendon)
 
         return tendons
+
+    def get_post_tenson_scale(self, debug=False):
+        numbers_df = self.words[self.words["value"].str.isnumeric()]
+        numbers_df["value"] = pd.to_numeric(numbers_df["value"], errors="coerce").astype("int")
+        numbers_df = numbers_df[(numbers_df["value"] >= 1) & (numbers_df["value"] <= 15)]
+        numbers_df.sort_values(by=["y1"], inplace=True)
+
+        y = np.sort(numbers_df["y1"].values)
+        bin_width = 0.002
+
+        max_count = 0
+        best_start = None
+
+        left = 0
+        for right in range(len(y)):
+            while y[right] - y[left] > bin_width:
+                left += 1
+
+            count = right - left + 1
+            if count > max_count:
+                max_count = count
+                best_start = y[left]
+
+        numbers_df = numbers_df[(numbers_df["y1"] >= best_start) & (numbers_df["y1"] <= best_start + bin_width)]
+        numbers_df.sort_values(by=["value"], inplace=True)
+        # print("Best y1 range:", best_start, "to", best_start + bin_width)
+        # print("Count:", max_count)
+
+        print(numbers_df.to_string())
 
     def get_tendons(self, debug=False, keyword="TENDON"):
         all_keywords = self.find_keyword(keyword, debug)

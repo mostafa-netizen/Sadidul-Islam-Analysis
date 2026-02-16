@@ -34,12 +34,12 @@ def main():
     directory_path = "data/final_output"
     debug_path = "data/debug"
     print("removing old files...")
-    if os.path.exists(debug_path) and os.path.isdir(debug_path):
-        shutil.rmtree(debug_path)
-    os.makedirs(debug_path, exist_ok=True)
-    if os.path.exists(directory_path) and os.path.isdir(directory_path):
-        shutil.rmtree(directory_path)
-    os.makedirs(directory_path, exist_ok=True)
+    # if os.path.exists(debug_path) and os.path.isdir(debug_path):
+    #     shutil.rmtree(debug_path)
+    # os.makedirs(debug_path, exist_ok=True)
+    # if os.path.exists(directory_path) and os.path.isdir(directory_path):
+    #     shutil.rmtree(directory_path)
+    # os.makedirs(directory_path, exist_ok=True)
 
     progress = tqdm.tqdm(total=len(images))
     excels = []
