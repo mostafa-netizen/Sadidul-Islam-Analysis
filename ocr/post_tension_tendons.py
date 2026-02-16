@@ -10,6 +10,23 @@ from ocr.line_detector import detect_lines_global, merge_lines, detect_line_endi
 from ocr.line_utils import count_text_lines
 
 
+def line_y(line):
+    # horizontal line → y1 == y2
+    return line[1]
+
+
+def bbox_center_y(bbox):
+    return (bbox[1] + bbox[3]) / 2
+
+
+def horizontal_overlap(line, bbox):
+    lx1, _, lx2, _ = line
+    bx1, _, bx2, _ = bbox
+
+    overlap = min(lx2, bx2) - max(lx1, bx1)
+    return overlap > 0
+
+
 def find_post_tenson_template_and_match(source_image, thresh=2.0):
     image = source_image.copy()
     template_vals = {
@@ -38,7 +55,13 @@ def remove_noise(img_gray):
 
     return erode
 
-def detect_line_features(source_img, template_img, start=0.8, stop=1.5, num=20):
+def detect_line_features(source_img, start=0.8, stop=1.5, num=20):
+    template_vals = {
+        "post-tension-line-dots.png": ([0, 200], 'right')
+    }
+    template = list(template_vals.keys())[0]
+    template_img = cv2.imread(f"img_templates/{template}", cv2.IMREAD_COLOR)
+
     source_img = remove_noise(source_img)
     features = []
     crop_length = 200
@@ -95,6 +118,73 @@ def detect_post_tension_template_and_line(
 
     return None
 
+def closest_bbox_per_line(lines, bboxes):
+    result = []
+
+    for line in lines:
+        ly = line_y(line)
+
+        best_bbox = None
+        best_dist = float("inf")
+
+        for bbox in bboxes:
+            if not horizontal_overlap(line, bbox):
+                continue  # skip unrelated objects
+
+            by = bbox_center_y(bbox)
+            dist = abs(ly - by)
+
+            if dist < best_dist:
+                best_dist = dist
+                best_bbox = bbox
+
+        result.append((line, best_bbox, best_dist))
+
+    return result
+
+def remove_similar_lines(lines, y_thresh=10):
+    """
+    Remove similar horizontal lines.
+    Keeps the longest line among those close vertically.
+    """
+
+    # sort by y coordinate
+    lines = sorted(lines, key=lambda x: x[1])
+
+    filtered = []
+    used = [False] * len(lines)
+
+    for i, l1 in enumerate(lines):
+        if used[i]:
+            continue
+
+        group = [i]
+        y1 = l1[1]
+
+        # group close lines
+        for j in range(i + 1, len(lines)):
+            if used[j]:
+                continue
+
+            y2 = lines[j][1]
+
+            if abs(y1 - y2) <= y_thresh:
+                group.append(j)
+                used[j] = True
+            else:
+                break
+
+        # pick the longest line in this group
+        best_idx = max(
+            group,
+            key=lambda idx: abs(lines[idx][2] - lines[idx][0])
+        )
+
+        filtered.append(lines[best_idx])
+
+    return filtered
+
+
 def extract_post_tension_tendons(words, image):
     text_extractor = TextExtractor(words, debug=True)
     value = text_extractor.get_post_tenson_tendons()
@@ -103,54 +193,43 @@ def extract_post_tension_tendons(words, image):
     erode = remove_noise(image)
 
     raw_lines = detect_lines_global(erode)
-    final_lines = merge_lines(raw_lines, 5)
+    final_lines = merge_lines(raw_lines, 2)
 
     vis = image.copy()
-    for x1, y1, x2, y2 in final_lines:
-        cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-    b_th = 10
-    i = 0
     excel = []
+    tendon_lines = []
+    for x1, y1, x2, y2 in final_lines:
+        img_crop = image[y1 - 50:y2 + 50, x1 - 100:x2 + 100]
+        features = detect_line_features(source_img=img_crop)
+
+        if len(features) > 2:
+            tendon_lines.append([x1, y1, x2, y2])
+
+    tendon_lines = remove_similar_lines(tendon_lines, 20)
+    # for x1, y1, x2, y2 in final_lines:
+    #     cv2.line(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    i = 0
+    tendon_boxes = []
     for tendon in value:
-        color = (0, 0, 255)
-        # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         i = i + 1
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
-        line_count = count_text_lines(tendon)
-        x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)  # indicator bbox
-        data = detect_post_tension_template_and_line(image, final_lines, x1, y1, x2, y2, line_count, b_th)
+        x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)
+        cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        tendon_boxes.append([x1, y1, x2, y2])
 
-        if data is not None:
-            found, matched, bbox, val, e_bbox = data
-            # print(bbox, matched)
+    matches = closest_bbox_per_line(tendon_lines, tendon_boxes)
 
-            xe1, ye1, xe2, ye2 = e_bbox
-            cv2.putText(vis, f"{i}", (xe1+200, ye1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-
-            if matched:
-                xt1, yt1, xt2, yt2 = bbox
-                if found is not None:
-                    cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 3)
-                    cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-                    xl1, yl1, xl2, yl2 = found
-                    cv2.line(vis, (xl1, yl1), (xl2, yl2), color, 4)
-                    # try:
-                    #     measurement = "~{:.2f}{}".format((distance(xl1, yl1, xl2, yl2)/pixel_dist)*measure, unit)
-                    #     cv2.putText(vis, f"{measurement}", (xe1, ye1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-                    #     excel.append([" ".join(tendon.value.tolist()), measurement])
-                    # except Exception as e:
-                    #     pass
-                    #     # print("Measurement error:", e)
-                else:
-                    # color = (255, 0, 0)
-                    cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 2)
-                    cv2.rectangle(vis, (xt1, yt1), (xt2, yt2), color, 2)
-                    cv2.putText(vis, f"{matched}", (xt1, yt1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            else:
-                # color = (0, 0, 255)
-                cv2.rectangle(vis, (xe1, ye1), (xe2, ye2), color, 1)
-                cv2.putText(vis, f"{matched}", (xe1, ye1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+    for line, bbox, dist in matches:
+        if line is None or bbox is None or dist > 150:
+            continue
+        color = (0, 0, 255)
+        # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        x1, y1, x2, y2 = line
+        cv2.line(vis, (x1, y1), (x2, y2), color, 3)
+        x1, y1, x2, y2 = bbox
+        cv2.rectangle(vis, (x1, y1), (x2, y2), color, 3)
+        # cv2.putText(vis, f"{dist:.4f}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
 
     excel = pd.DataFrame(excel, columns=["Callouts", "Measurements"])
     return vis, excel
