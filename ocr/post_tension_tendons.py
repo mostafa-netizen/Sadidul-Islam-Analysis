@@ -1,4 +1,5 @@
 import random
+import re
 
 import cv2
 import numpy as np
@@ -7,7 +8,7 @@ import pandas as pd
 from ocr.extractor import TextExtractor
 from ocr.line_detector import detect_lines_global, merge_lines, detect_line_ending_in_bbox, template_matching, \
     is_grayscale, find_template_location
-from ocr.line_utils import count_text_lines
+from ocr.line_utils import count_text_lines, distance
 
 
 def line_y(line):
@@ -126,8 +127,9 @@ def closest_bbox_per_line(lines, bboxes):
 
         best_bbox = None
         best_dist = float("inf")
+        best_idx = -1
 
-        for bbox in bboxes:
+        for i, bbox in enumerate(bboxes):
             if not horizontal_overlap(line, bbox):
                 continue  # skip unrelated objects
 
@@ -137,8 +139,9 @@ def closest_bbox_per_line(lines, bboxes):
             if dist < best_dist:
                 best_dist = dist
                 best_bbox = bbox
+                best_idx = i
 
-        result.append((line, best_bbox, best_dist))
+        result.append((line, best_bbox, best_dist, best_idx))
 
     return result
 
@@ -187,10 +190,10 @@ def remove_similar_lines(lines, y_thresh=10):
 
 def extract_post_tension_tendons(words, image):
     text_extractor = TextExtractor(words, debug=True)
-    text_extractor.get_post_tenson_scale(debug=True)
-    exit(0)
+    dist_per_inch = text_extractor.get_post_tenson_scale(debug=True)
     value = text_extractor.get_post_tenson_tendons()
     height, width = image.shape[:2]
+    pixel_per_inch = width * dist_per_inch
 
     erode = remove_noise(image)
 
@@ -198,7 +201,6 @@ def extract_post_tension_tendons(words, image):
     final_lines = merge_lines(raw_lines, 2)
 
     vis = image.copy()
-    excel = []
     tendon_lines = []
     for x1, y1, x2, y2 in final_lines:
         img_crop = image[y1 - 50:y2 + 50, x1 - 100:x2 + 100]
@@ -213,25 +215,39 @@ def extract_post_tension_tendons(words, image):
 
     i = 0
     tendon_boxes = []
+    tendon_value = []
     for tendon in value:
         i = i + 1
         x1, y1, x2, y2 = tendon.x1.min(), tendon.y1.min(), tendon.x2.max(), tendon.y2.max()
         x1, y1, x2, y2 = int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)
         cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255), 2)
         tendon_boxes.append([x1, y1, x2, y2])
+        tendon_value.append(tendon.iloc[0].value)
 
     matches = closest_bbox_per_line(tendon_lines, tendon_boxes)
 
-    for line, bbox, dist in matches:
+    excel = []
+    for line, bbox, dist, idx in matches:
         if line is None or bbox is None or dist > 150:
             continue
         color = (0, 0, 255)
         # color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        x1, y1, x2, y2 = line
-        cv2.line(vis, (x1, y1), (x2, y2), color, 3)
+        xl1, yl1, xl2, yl2 = line
+        cv2.line(vis, (xl1, yl1), (xl2, yl2), color, 3)
         x1, y1, x2, y2 = bbox
+        length_in_inch = distance(xl1, yl1, xl2, yl2) / pixel_per_inch
+        length_in_feet = length_in_inch / 12
+        measurement = f"{int(length_in_feet)}'{int(length_in_inch % 12)}\""
+        cv2.putText(vis, measurement, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
         cv2.rectangle(vis, (x1, y1), (x2, y2), color, 3)
-        # cv2.putText(vis, f"{dist:.4f}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
 
-    excel = pd.DataFrame(excel, columns=["Callouts", "Measurements"])
+        match = re.search(r"(\d+\.?\d*)", tendon_value[idx])
+
+        force_per_feet = 0
+        if match:
+            force_per_feet = float(match.group(1))
+
+        excel.append([tendon_value[idx], measurement, force_per_feet * length_in_feet])
+
+    excel = pd.DataFrame(excel, columns=["Callouts", "Length", "Total Force"])
     return vis, excel

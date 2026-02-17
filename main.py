@@ -26,11 +26,18 @@ def main():
     if cache and os.path.exists(cache_ocr):
         print("Reading cached images")
         images = []
-        for i in glob.glob(f"{cache_ocr}/*.png"):
-            images.append(Image.open(i))
+        names = list(glob.glob(f"{cache_ocr}/*.png"))
+
+        for i in range(len(names)):
+            images.append(Image.open(f"{cache_ocr}/original{i}.png"))
     else:
         os.makedirs(cache_ocr, exist_ok=True)
         images = convert_from_path(input_path)
+        if cache:
+
+            for i, image in enumerate(images):
+                image = np.asarray(image)
+                cv2.imwrite(f"{cache_ocr}/original{i}.png", image)
 
     print("Total images: ", len(images))
 
@@ -53,8 +60,6 @@ def main():
             continue
         print("page: ", i + 1)
         drawing = np.asarray(drawing)
-        if cache:
-            cv2.imwrite(f"{cache_ocr}/original{i}.png", drawing)
 
         cache_dir = f"{cache_ocr}/original{i}.csv"
         if cache and os.path.exists(cache_dir):

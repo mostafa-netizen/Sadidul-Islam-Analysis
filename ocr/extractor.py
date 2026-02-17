@@ -1,4 +1,5 @@
 import re
+from operator import index
 
 import numpy as np
 import pandas as pd
@@ -68,17 +69,31 @@ class TextExtractor(BaseExtractor):
         numbers_df = numbers_df[(numbers_df["y1"] >= best_start) & (numbers_df["y1"] <= best_start + bin_width)]
         numbers_df.sort_values(by=["value"], inplace=True)
         numbers_df.loc[:, "diff"] = numbers_df["value"].shift(-1) - numbers_df["value"]
+        dist = 0
+        measure = 0
         for i in range(numbers_df.shape[0]):
             if numbers_df.iloc[i]["diff"] == 1:
-                first = numbers_df.iloc[i]
-                second = numbers_df.iloc[i+1]
-                print(first.value, second.value)
-                break
+                ref_df = numbers_df.iloc[i:i+2].reset_index(drop=True)
 
-        # print("Best y1 range:", best_start, "to", best_start + bin_width)
-        # print("Count:", max_count)
+                ref_df["value"] = ref_df.value.astype(str)
+                position = self.parse_position([4, 2, -1, 1])
+                top, left, bottom, right = self.calculate_dimension(ref_df, position, end_to_end=True)
+                value = self.filter_all(self.words, position, top, bottom, left, right, False)
+                match = re.match(r"(\d+)'\s*-\s*(\d+)\"", value.iloc[0].value)
 
-        print(numbers_df.to_string())
+                if match:
+                    feet = int(match.group(1))
+                    inches = int(match.group(2))
+                    p1 = (ref_df.iloc[0].x1 + ref_df.iloc[0].x2) / 2
+                    p2 = (ref_df.iloc[1].x1 + ref_df.iloc[1].x2) / 2
+
+                    dist = abs(p1 - p2)
+                    measure = (feet * 12) + inches
+
+        try:
+            return dist/measure
+        except ZeroDivisionError:
+            return 0
 
     def get_tendons(self, debug=False, keyword="TENDON"):
         all_keywords = self.find_keyword(keyword, debug)

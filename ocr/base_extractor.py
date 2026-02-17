@@ -27,26 +27,31 @@ class BaseExtractor:
         return height, width
 
     @staticmethod
-    def calculate_top_left(ref_df, line_h, char_w, down, left):
+    def calculate_top_left(ref_df, line_h, char_w, top, left):
         if ref_df is None or ref_df.empty:
             raise Exception('Reference DataFrame is empty')
 
-        return ref_df.y1.min() + (line_h * down), ref_df.iloc[0].x1 + (char_w * left)
+        return ref_df.y1.min() + (line_h * top), ref_df.iloc[0].x1 + (char_w * left)
 
     @staticmethod
-    def calculate_bottom_right(ref_df, line_h, char_w, up, right):
+    def calculate_bottom_right(ref_df, line_h, char_w, bottom, right, end_to_end=False):
         if ref_df is None or ref_df.empty:
             raise Exception('Reference DataFrame is empty')
 
-        return ref_df.y2.max() + (line_h * up), ref_df.iloc[0].x2 + (char_w * right)
+        if end_to_end:
+            right = ref_df.x2.max() + (char_w * right)
+        else:
+            right = ref_df.iloc[0].x2 + (char_w * right)
 
-    def calculate_dimension(self, ref_df, position):
+        return ref_df.y2.max() + (line_h * bottom), right
+
+    def calculate_dimension(self, ref_df, position, end_to_end=False):
         if ref_df is None or ref_df.empty:
             raise Exception('Reference DataFrame is empty')
 
         line_h, char_w = self.calculate_height_width(ref_df)
         top, left = self.calculate_top_left(ref_df, line_h, char_w, position["top"], position["left"])
-        bottom, right = self.calculate_bottom_right(ref_df, line_h, char_w, position["bottom"], position["right"])
+        bottom, right = self.calculate_bottom_right(ref_df, line_h, char_w, position["bottom"], position["right"], end_to_end)
 
         return top, left, bottom, right
 
