@@ -45,7 +45,7 @@ class TextExtractor(BaseExtractor):
 
     def get_post_tenson_scale(self, debug=False):
         numbers_df = self.words[self.words["value"].str.isnumeric()]
-        numbers_df["value"] = pd.to_numeric(numbers_df["value"], errors="coerce").astype("int")
+        numbers_df.loc[:, "value"] = pd.to_numeric(numbers_df["value"], errors="coerce").astype("int")
         numbers_df = numbers_df[(numbers_df["value"] >= 1) & (numbers_df["value"] <= 15)]
         numbers_df.sort_values(by=["y1"], inplace=True)
 
@@ -67,6 +67,14 @@ class TextExtractor(BaseExtractor):
 
         numbers_df = numbers_df[(numbers_df["y1"] >= best_start) & (numbers_df["y1"] <= best_start + bin_width)]
         numbers_df.sort_values(by=["value"], inplace=True)
+        numbers_df.loc[:, "diff"] = numbers_df["value"].shift(-1) - numbers_df["value"]
+        for i in range(numbers_df.shape[0]):
+            if numbers_df.iloc[i]["diff"] == 1:
+                first = numbers_df.iloc[i]
+                second = numbers_df.iloc[i+1]
+                print(first.value, second.value)
+                break
+
         # print("Best y1 range:", best_start, "to", best_start + bin_width)
         # print("Count:", max_count)
 
@@ -92,7 +100,7 @@ class TextExtractor(BaseExtractor):
             except IndexError:
                 pass
             try:
-                tendon.append(value.loc[value.value.str.match("\(\s*\d\s*\)", na=False)].iloc[0:1])
+                tendon.append(value.loc[value.value.str.match(r"\(\s*\d\s*\)", na=False)].iloc[0:1])
             except IndexError:
                 pass
 

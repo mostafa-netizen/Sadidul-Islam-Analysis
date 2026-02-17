@@ -1,8 +1,10 @@
+import glob
 import os
 import shutil
 
 import numpy as np
 import tqdm
+from PIL import Image
 from pdf2image import convert_from_path
 import pandas as pd
 import cv2
@@ -19,36 +21,50 @@ def main():
     # input_path = 'data/pdfs/plan.pdf'
     cache_ocr = 'data/miliennium_garage'
     gpu = True
+    cache = True
 
-    images = convert_from_path(input_path)
-    # images = [
-    #     images[8],
-    #     images[10],
-    #     images[12]
-    # ]
-    images = [
-        images[4],
-    ]
+    if cache and os.path.exists(cache_ocr):
+        print("Reading cached images")
+        images = []
+        for i in glob.glob(f"{cache_ocr}/*.png"):
+            images.append(Image.open(i))
+    else:
+        os.makedirs(cache_ocr, exist_ok=True)
+        images = convert_from_path(input_path)
+
     print("Total images: ", len(images))
 
     directory_path = "data/final_output"
     debug_path = "data/debug"
     print("removing old files...")
-    # if os.path.exists(debug_path) and os.path.isdir(debug_path):
-    #     shutil.rmtree(debug_path)
-    # os.makedirs(debug_path, exist_ok=True)
-    # if os.path.exists(directory_path) and os.path.isdir(directory_path):
-    #     shutil.rmtree(directory_path)
-    # os.makedirs(directory_path, exist_ok=True)
+    if os.path.exists(debug_path) and os.path.isdir(debug_path):
+        shutil.rmtree(debug_path)
+    os.makedirs(debug_path, exist_ok=True)
+    if os.path.exists(directory_path) and os.path.isdir(directory_path):
+        shutil.rmtree(directory_path)
+    os.makedirs(directory_path, exist_ok=True)
 
     progress = tqdm.tqdm(total=len(images))
     excels = []
     for i, drawing in enumerate(images):
+        acceptable = [4]
+        # acceptable = [8, 10, 12]
+        if i not in acceptable:
+            continue
         print("page: ", i + 1)
         drawing = np.asarray(drawing)
-        df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
-        # cv2.imwrite(f"{cache_ocr}/original{i}.png", drawing)
-        # df_final.to_csv(f"{cache_ocr}/original{i}.csv", index=False)
+        if cache:
+            cv2.imwrite(f"{cache_ocr}/original{i}.png", drawing)
+
+        cache_dir = f"{cache_ocr}/original{i}.csv"
+        if cache and os.path.exists(cache_dir):
+            print("Reading cached words")
+            df_final = pd.read_csv(cache_dir)
+        else:
+            df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
+
+            if cache:
+                df_final.to_csv(cache_dir, index=False)
 
         vis, excel = extract_post_tension_tendons(df_final, drawing)
         # vis, excel = extract_tendons(df_final, drawing)
