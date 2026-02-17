@@ -247,7 +247,7 @@ def extract_post_tension_tendons(words, image):
         if match:
             force_per_feet = float(match.group(1))
 
-        excel.append([tendon_value[idx], measurement, force_per_feet * length_in_feet])
+        excel.append([tendon_value[idx], measurement, f"{force_per_feet * length_in_feet:.2f}"])
 
     excel = pd.DataFrame(excel, columns=["Callouts", "Length", "Total Force"])
     return vis, excel
