@@ -11,9 +11,16 @@ import cv2
 
 from ocr.line_utils import extract_tendons
 from ocr.post_tension_tendons import extract_post_tension_tendons
-from ocr.ocr_utils import tile_ocr
+from ocr.ocr_utils import tile_ocr, deduplicate_ocr
 
 
+def undo_rotate_90_clockwise(df):
+    df2 = df.copy()
+    df2["x1"] = df["y1"]
+    df2["y1"] = 1 - df["x2"]
+    df2["x2"] = df["y2"]
+    df2["y2"] = 1 - df["x1"]
+    return df2
 
 def main():
     input_path = 'data/pdfs/Miliennium Garage Original Structural Drawings.pdf'
@@ -67,6 +74,13 @@ def main():
             df_final = pd.read_csv(cache_dir)
         else:
             df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
+            drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
+            df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
+            pattern = r"^B[--]\d+$"
+            df_final_90cw = df_final_90cw[df_final_90cw["value"].astype(str).str.match(pattern, na=False)]
+            df_final_90cw = undo_rotate_90_clockwise(df_final_90cw)
+            df_final = pd.concat([df_final, df_final_90cw], ignore_index=True)
+            df_final = deduplicate_ocr(df_final, iou_thresh=0.8)
 
             if cache:
                 df_final.to_csv(cache_dir, index=False)

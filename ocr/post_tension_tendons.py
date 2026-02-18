@@ -187,7 +187,6 @@ def remove_similar_lines(lines, y_thresh=10):
 
     return filtered
 
-
 def extract_post_tension_tendons(words, image):
     text_extractor = TextExtractor(words, debug=True)
     dist_per_inch = text_extractor.get_post_tenson_scale(debug=True)
@@ -201,6 +200,15 @@ def extract_post_tension_tendons(words, image):
     final_lines = merge_lines(raw_lines, 2)
 
     vis = image.copy()
+    for _, row in words.iterrows():
+        x1 = int(row["x1"] * width)
+        y1 = int(row["y1"] * height)
+        x2 = int(row["x2"] * width)
+        y2 = int(row["y2"] * height)
+
+        cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(vis, str(row["value"]), (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
     tendon_lines = []
     for x1, y1, x2, y2 in final_lines:
         img_crop = image[y1 - 50:y2 + 50, x1 - 100:x2 + 100]
@@ -251,3 +259,4 @@ def extract_post_tension_tendons(words, image):
 
     excel = pd.DataFrame(excel, columns=["Callouts", "Length", "Total Force"])
     return vis, excel
+

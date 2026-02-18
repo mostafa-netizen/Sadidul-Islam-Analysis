@@ -45,54 +45,57 @@ class TextExtractor(BaseExtractor):
         return tendons
 
     def get_post_tenson_scale(self, debug=False):
-        numbers_df = self.words[self.words["value"].str.isnumeric()]
-        numbers_df.loc[:, "value"] = pd.to_numeric(numbers_df["value"], errors="coerce").astype("int")
-        numbers_df = numbers_df[(numbers_df["value"] >= 1) & (numbers_df["value"] <= 15)]
-        numbers_df.sort_values(by=["y1"], inplace=True)
-
-        y = np.sort(numbers_df["y1"].values)
-        bin_width = 0.002
-
-        max_count = 0
-        best_start = None
-
-        left = 0
-        for right in range(len(y)):
-            while y[right] - y[left] > bin_width:
-                left += 1
-
-            count = right - left + 1
-            if count > max_count:
-                max_count = count
-                best_start = y[left]
-
-        numbers_df = numbers_df[(numbers_df["y1"] >= best_start) & (numbers_df["y1"] <= best_start + bin_width)]
-        numbers_df.sort_values(by=["value"], inplace=True)
-        numbers_df.loc[:, "diff"] = numbers_df["value"].shift(-1) - numbers_df["value"]
-        dist = 0
-        measure = 0
-        for i in range(numbers_df.shape[0]):
-            if numbers_df.iloc[i]["diff"] == 1:
-                ref_df = numbers_df.iloc[i:i+2].reset_index(drop=True)
-
-                ref_df["value"] = ref_df.value.astype(str)
-                position = self.parse_position([4, 2, -1, 1])
-                top, left, bottom, right = self.calculate_dimension(ref_df, position, end_to_end=True)
-                value = self.filter_all(self.words, position, top, bottom, left, right, False)
-                match = re.match(r"(\d+)'\s*-\s*(\d+)\"", value.iloc[0].value)
-
-                if match:
-                    feet = int(match.group(1))
-                    inches = int(match.group(2))
-                    p1 = (ref_df.iloc[0].x1 + ref_df.iloc[0].x2) / 2
-                    p2 = (ref_df.iloc[1].x1 + ref_df.iloc[1].x2) / 2
-
-                    dist = abs(p1 - p2)
-                    measure = (feet * 12) + inches
-
         try:
+            numbers_df = self.words[self.words["value"].str.isnumeric()]
+            numbers_df.loc[:, "value"] = pd.to_numeric(numbers_df["value"], errors="coerce").astype("int")
+            numbers_df = numbers_df[(numbers_df["value"] >= 1) & (numbers_df["value"] <= 15)]
+            numbers_df.sort_values(by=["y1"], inplace=True)
+
+            y = np.sort(numbers_df["y1"].values)
+            bin_width = 0.002
+
+            max_count = 0
+            best_start = None
+
+            left = 0
+            for right in range(len(y)):
+                while y[right] - y[left] > bin_width:
+                    left += 1
+
+                count = right - left + 1
+                if count > max_count:
+                    max_count = count
+                    best_start = y[left]
+
+            numbers_df = numbers_df[(numbers_df["y1"] >= best_start) & (numbers_df["y1"] <= best_start + bin_width)]
+            numbers_df.sort_values(by=["value"], inplace=True)
+            numbers_df.loc[:, "diff"] = numbers_df["value"].shift(-1) - numbers_df["value"]
+            dist = 0
+            measure = 0
+            for i in range(numbers_df.shape[0]):
+                if numbers_df.iloc[i]["diff"] == 1:
+                    try:
+                        ref_df = numbers_df.iloc[i:i+2].reset_index(drop=True)
+
+                        ref_df["value"] = ref_df.value.astype(str)
+                        position = self.parse_position([4, 2, -1, 1])
+                        top, left, bottom, right = self.calculate_dimension(ref_df, position, end_to_end=True)
+                        value = self.filter_all(self.words, position, top, bottom, left, right, False)
+                        match = re.match(r"(\d+)'\s*-\s*(\d+)\"", value.iloc[0].value)
+
+                        if match:
+                            feet = int(match.group(1))
+                            inches = int(match.group(2))
+                            p1 = (ref_df.iloc[0].x1 + ref_df.iloc[0].x2) / 2
+                            p2 = (ref_df.iloc[1].x1 + ref_df.iloc[1].x2) / 2
+
+                            dist = abs(p1 - p2)
+                            measure = (feet * 12) + inches
+                    except IndexError:
+                        pass
+
             return dist/measure
-        except ZeroDivisionError:
+        except (ZeroDivisionError, TypeError):
             return 0
 
     def get_tendons(self, debug=False, keyword="TENDON"):
