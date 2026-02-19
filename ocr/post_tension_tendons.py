@@ -188,8 +188,8 @@ def remove_similar_lines(lines, y_thresh=10):
     return filtered
 
 def extract_post_tension_tendons(words, image):
-    text_extractor = TextExtractor(words, debug=True)
-    dist_per_inch = text_extractor.get_post_tenson_scale(debug=True)
+    text_extractor = TextExtractor(words, debug=False)
+    dist_per_inch = text_extractor.get_post_tenson_scale(debug=False)
     value = text_extractor.get_post_tenson_tendons()
     height, width = image.shape[:2]
     pixel_per_inch = width * dist_per_inch

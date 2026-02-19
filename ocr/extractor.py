@@ -22,6 +22,29 @@ class TextExtractor(BaseExtractor):
         self.word_separators = [":", "-", ".", ",", "?"]
         self.columns = ["word_idx", "value", "confidence", "x1", "y1", "x2", "y2"]
 
+    def get_beam_based_tendons(self, debug=False):
+        keyword = r"^B[--]\d+$"
+        all_keywords = self.find_keyword(keyword, debug)
+        # tendons = []
+        #
+        # for i, _ in all_keywords.reset_index().iterrows():
+        #     ref_df = self.find_keywords([{"keyword": keyword, "index": i}], debug)
+        #     position = self.parse_position([1, -1, -3, 3])
+        #     top, left, bottom, right = self.calculate_dimension(ref_df, position)
+        #     value = self.filter_all(self.words, position, top, bottom, left, right, debug)
+        #
+        #     tendon = []
+        #     try:
+        #         tendon.append(value.loc[value.value.str.contains(keyword, na=False)].iloc[0:1])
+        #     except IndexError:
+        #         pass
+        #
+        #     tendon = pd.concat(tendon)
+        #     if tendon.shape[0] > 0:
+        #         tendons.append(tendon)
+
+        return all_keywords
+
     def get_post_tenson_tendons(self, debug=False, keyword="F="):
         all_keywords = self.find_keyword(keyword, debug)
         tendons = []

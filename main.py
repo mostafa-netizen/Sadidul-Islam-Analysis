@@ -9,6 +9,7 @@ from pdf2image import convert_from_path
 import pandas as pd
 import cv2
 
+from ocr.beam_based_tendons import extract_beam_based_tendons
 from ocr.line_utils import extract_tendons
 from ocr.post_tension_tendons import extract_post_tension_tendons
 from ocr.ocr_utils import tile_ocr, deduplicate_ocr
@@ -74,18 +75,22 @@ def main():
             df_final = pd.read_csv(cache_dir)
         else:
             df_final = tile_ocr(drawing, batch_size=24, gpu=gpu)
-            drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
-            df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
-            pattern = r"^B[--]\d+$"
-            df_final_90cw = df_final_90cw[df_final_90cw["value"].astype(str).str.match(pattern, na=False)]
-            df_final_90cw = undo_rotate_90_clockwise(df_final_90cw)
-            df_final = pd.concat([df_final, df_final_90cw], ignore_index=True)
-            df_final = deduplicate_ocr(df_final, iou_thresh=0.8)
+            # drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
+            # df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
+            # pattern = r"^B[--]\d+$"
+            # df_final_90cw = df_final_90cw[df_final_90cw["value"].astype(str).str.match(pattern, na=False)]
+            # df_final_90cw = undo_rotate_90_clockwise(df_final_90cw)
+            # df_final = pd.concat([df_final, df_final_90cw], ignore_index=True)
+            # df_final = deduplicate_ocr(df_final, iou_thresh=0.8)
 
             if cache:
                 df_final.to_csv(cache_dir, index=False)
 
-        vis, excel = extract_post_tension_tendons(df_final, drawing)
+        drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
+        df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
+
+        vis, excel = extract_beam_based_tendons(df_final_90cw, drawing_90cw)
+        # vis, excel = extract_post_tension_tendons(df_final, drawing)
         # vis, excel = extract_tendons(df_final, drawing)
         if excel is not None:
             excel["page"] = i + 1
