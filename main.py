@@ -86,11 +86,11 @@ def main():
             if cache:
                 df_final.to_csv(cache_dir, index=False)
 
-        drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
-        df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
-
-        vis, excel = extract_beam_based_tendons(df_final_90cw, drawing_90cw)
-        # vis, excel = extract_post_tension_tendons(df_final, drawing)
+        # drawing_90cw = cv2.rotate(drawing, cv2.ROTATE_90_CLOCKWISE)
+        # df_final_90cw = tile_ocr(drawing_90cw, batch_size=24, gpu=gpu)
+        #
+        # vis, excel = extract_beam_based_tendons(df_final_90cw, drawing_90cw)
+        vis, excel = extract_post_tension_tendons(df_final, drawing)
         # vis, excel = extract_tendons(df_final, drawing)
         if excel is not None:
             excel["page"] = i + 1
